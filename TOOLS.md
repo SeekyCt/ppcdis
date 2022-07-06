@@ -41,7 +41,6 @@ section_defs:
 
 The properties of a section are:
     - `attr` (optional) attributes given to the section in disassembly
-    - `align` (optional) alignment of the section
 
 ## Analyser
 

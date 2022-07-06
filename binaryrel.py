@@ -68,8 +68,8 @@ class RelBinarySection(BinarySection):
     """Custom BinarySection that tracks its index in the rel header"""
 
     def __init__(self, rel_idx: int, name: str, type: SectionType, offset: int, addr: int,
-                 size: int, attr: str = None, align: int = 32):
-        super().__init__(name, type, offset, addr, size, attr, align)
+                 size: int, attr: str = None):
+        super().__init__(name, type, offset, addr, size, attr)
         self.rel_idx = rel_idx
 
 # TODO: this can probably just be merged with DolSectionDef
@@ -79,7 +79,6 @@ class RelSectionDef:
 
     name: str
     attr: str = None
-    align: int = 0x20
 
 default_section_defs = [
     [ # Text
@@ -276,7 +275,7 @@ class RelReader(BinaryReader):
 
                 # BSS section
                 sec = RelBinarySection(i, ".bss", SectionType.BSS, 0, self._bss_addr, bss_size,
-                                    bss_def.attr, bss_def.align)
+                                    bss_def.attr)
                 ret.append(sec)
                 self._rel_sections.append(sec)
             else:
@@ -286,7 +285,6 @@ class RelReader(BinaryReader):
                     sec_type = SectionType.TEXT
                     sec_name = text_defs[text_n].name
                     sec_attr = text_defs[text_n].attr
-                    sec_align = text_defs[text_n].align
                     text_n += 1
                 else:
                     # Data section
@@ -294,12 +292,11 @@ class RelReader(BinaryReader):
                     sec_type = SectionType.DATA
                     sec_name = data_defs[data_n].name
                     sec_attr = data_defs[data_n].attr
-                    sec_align = data_defs[data_n].align
                     data_n += 1
                 sec_offs &= ~3
                 sec_addr = self._base_addr + sec_offs
                 sec = RelBinarySection(i, sec_name, sec_type, sec_offs, sec_addr, sec_size,
-                                       sec_attr, sec_align)
+                                       sec_attr)
                 ret.append(sec)
                 self._rel_sections.append(sec)
 

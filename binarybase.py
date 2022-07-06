@@ -31,7 +31,6 @@ class BinarySection:
     addr: int
     size: int
     attr: str = None
-    align: int = 0x20
 
     def contains_offs(self, offs: int) -> bool:
         """Checks if the section contains an offset relative to the whole binary"""
@@ -71,7 +70,7 @@ class BinarySection:
         """String representation for debugging"""
 
         return (f"BinarySection({self.name}, {self.type}, 0x{self.offset:x}, 0x{self.addr:x}, "
-               f"0x{self.size:x}, {self.attr}, 0x{self.align:x})")
+               f"0x{self.size:x}, {self.attr})")
 
 class BinaryReader(ABC):
     def __init__(self, path: str):
