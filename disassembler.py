@@ -4,6 +4,8 @@ Disassembler for assembly code (re)generation
 
 from argparse import ArgumentParser
 from dataclasses import dataclass
+from hashlib import sha1
+import json
 from typing import Dict, List
 
 import capstone
@@ -102,12 +104,12 @@ class DisasmLine:
     mnemonic: str
     operands: str
  
-    def to_txt(self, sym: SymbolGetter, inline=False) -> str:
+    def to_txt(self, sym: SymbolGetter, inline=False, hashable=False) -> str:
         """Gets the disassembly text for a line"""
 
         # Add .global and symbol name if required
         prefix = ""
-        name = sym.get_name(self.instr.address, True)
+        name = sym.get_name(self.instr.address, hashable, True)
         if name is not None:
             if sym.is_global(self.instr.address):
                 # Don't include function label in inline asm
@@ -117,10 +119,14 @@ class DisasmLine:
                 prefix = f"{name}:\n"
         if sym.check_jt_label(self.instr.address):
             prefix = ('//' if inline else '#') + " jumptable target\n" + prefix
+        
+        if not hashable:
+            comment = f"/* {self.instr.address:X} {self.instr.bytes.hex().upper()} */ "
+        else:
+            comment = ""
 
         # Add main data
-        return (f"{prefix}/* {self.instr.address:X} {self.instr.bytes.hex().upper()} */ "
-                f"{self.mnemonic:<12}{self.operands}")
+        return (f"{prefix}{comment}{self.mnemonic:<12}{self.operands}")
         
 class Disassembler:
     def __init__(self, binary: BinaryReader, symbols_path: str, source_name:str, labels_path: str,
@@ -157,7 +163,7 @@ class Disassembler:
         # Append to mnemonic
         line.mnemonic = instr.mnemonic + ('+' if likely else '-')
 
-    def _process_labelled_branch(self, instr: capstone.CsInsn, line: DisasmLine):
+    def _process_labelled_branch(self, instr: capstone.CsInsn, line: DisasmLine, hashable=False):
         """Replaces the destination of a branch with its symbol, and creates that if necessary"""
 
         # Preserve condition register usage if present
@@ -168,7 +174,7 @@ class Disassembler:
         dest = instr.operands[-1].imm
         
         # Replace destination with label name
-        line.operands = cr + self._sym.get_name(dest)
+        line.operands = cr + self._sym.get_name(dest, hashable)
     
     def _process_signed_immediate(self, instr: capstone.CsInsn, line: DisasmLine):
         """Sign extends the immediate when capstone misses it"""
@@ -178,7 +184,7 @@ class Disassembler:
         
         line.operands = others + ' ' + hex(signed)
     
-    def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine):
+    def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine, hashable=False):
         """Replaces the immediate of a lis with a reference"""
 
         # Get reference info
@@ -190,7 +196,7 @@ class Disassembler:
 
         # Add reference to operands
         dest = instr.reg_name(instr.operands[0].reg)
-        sym = self._sym.get_name(ref.target) + ref.format_offs()
+        sym = self._sym.get_name(ref.target, hashable) + ref.format_offs()
         if ref.t == RelocType.NORMAL:
             rel = "h"
         elif ref.t == RelocType.ALGEBRAIC:
@@ -199,7 +205,8 @@ class Disassembler:
             assert 0, f"Bad reloc {ref}"
         line.operands = f"{dest}, {sym}@{rel}"
     
-    def _process_lower(self, instr: capstone.CsInsn, line: DisasmLine, inline=False):
+    def _process_lower(self, instr: capstone.CsInsn, line: DisasmLine, inline=False,
+                       hashable=False):
         """Replaces the immediate of a lower instruction with a reference"""
 
         # Get reference info
@@ -218,7 +225,7 @@ class Disassembler:
         reg_name = instr.reg_name(reg)
 
         # Get symbol name
-        sym = self._sym.get_name(ref.target) + ref.format_offs()
+        sym = self._sym.get_name(ref.target, hashable) + ref.format_offs()
 
         # Different syntax for inline asm SDA
         if inline and ref.t == RelocType.SDA:
@@ -256,14 +263,14 @@ class Disassembler:
             else:
                 line.operands = f"{dest}, {reg_name}, {sym}{rel}"
 
-    def _process_instr(self, instr: capstone.CsInsn, inline=False) -> str:
+    def _process_instr(self, instr: capstone.CsInsn, inline=False, hashable=False) -> str:
         """Takes a capstone instruction and converts it to a DisasmLine"""
 
         if not isinstance(instr, DummyInstr):
             ret = DisasmLine(instr, instr.mnemonic, instr.op_str)
 
             if instr.id in labelledBranchInsns:
-                self._process_labelled_branch(instr, ret)
+                self._process_labelled_branch(instr, ret, hashable)
 
             if instr.id in conditionalBranchInsns:
                 self._process_branch_hint(instr, ret)
@@ -272,17 +279,17 @@ class Disassembler:
                 self._process_signed_immediate(instr, ret)
 
             if instr.id in upperInsns:
-                self._process_upper(instr, ret)
+                self._process_upper(instr, ret, hashable)
             
             if instr.id in lowerInsns or instr.id in storeLoadInsns:
-                self._process_lower(instr, ret, inline)
+                self._process_lower(instr, ret, inline, hashable)
             
             if instr.id in renamedInsns:
                 ret.mnemonic = renamedInsns[instr.id] + ' '
         else:
             ret = DisasmLine(instr, ("opword" if inline else ".4byte"), f"0x{instr.bytes.hex()}")
         
-        return ret.to_txt(self._sym, inline)
+        return ret.to_txt(self._sym, inline, hashable)
     
     def _process_data(self, addr: int, val: bytes, enable_ref=True) -> str:
         """Takes a word of data and converts it to a DisasmLine"""
@@ -304,7 +311,8 @@ class Disassembler:
         instr = DummyInstr(addr, val)
         return DisasmLine(instr, ".4byte", ops).to_txt(self._sym)
 
-    def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False) -> str:
+    def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
+                      hashable=False) -> str:
         if sec.type == SectionType.TEXT:
             # Disassemble
             lines = cs_disasm(start, self._bin.read(start, end - start), self.quiet)
@@ -312,12 +320,13 @@ class Disassembler:
             # Apply fixes and relocations
             nofralloc = "nofralloc\n" if inline else ""
             return nofralloc + '\n'.join([
-                self._process_instr(lines[addr], inline)
+                self._process_instr(lines[addr], inline, hashable)
                 for addr in lines
             ])
 
         elif sec.type in (SectionType.DATA, SectionType.BSS):
             assert not inline, "Only text can be disassembled for inline assembly"
+            assert not hashable, "Only text can be disassembled for hashing"
             ret = []
             unaligned = self._sym.get_unaligned_in(start, end)
             unaligned.append(0xffff_ffff) # Hack so that [0] can always be read
@@ -364,12 +373,15 @@ class Disassembler:
             self._disasm_range(section, section.addr, section.addr + section.size)
         )
     
-    def _function_to_text(self, addr: int, inline: bool) -> str:
+    def _function_to_text(self, addr: int, inline=False, hashable=False) -> str:
         """Outputs the disassembly of a single function to text"""
 
         self.print(f"Disassemble function {addr:x}")
 
-        # Get function bounds        
+        if hashable:
+            self._sym.reset_hash_naming()
+
+        # Get function bounds
         start, end = self._sym.get_containing_function(addr)
         assert addr == start, f"Expected function at {addr:x}" 
 
@@ -377,10 +389,10 @@ class Disassembler:
         sec = self._bin.find_section_containing(addr, True)
 
         # Disassemble and format
-        ret = [self._disasm_range(sec, start, end, inline).lstrip('\n')]
+        ret = [self._disasm_range(sec, start, end, inline, hashable).lstrip('\n')]
 
         # Add jumptables if wanted
-        if not inline:
+        if not inline and not hashable:
             # Get jumptables
             jumptables = self._rlc.get_referencing_jumptables(start, end)
 
@@ -458,6 +470,37 @@ class Disassembler:
             extra
         ))
 
+    def _section_to_hashes(self, section: BinarySection, no_addrs=False) -> str:
+        """Outputs the hashes of a single section to text"""
+ 
+        self.print(f"Hash section {section.name}")
+
+        if section.name == ".init":
+            rci = self._bin.get_rom_copy_info()
+        else:
+            rci = None
+        if rci is not None:
+            end = rci
+        else:
+            end = section.addr + section.size
+        
+        funcs = self._sym.get_functions_in_range(section.addr, end)
+
+        if not no_addrs:
+            return json.dumps(
+                {hex(addr) : self._function_to_hash(addr) for addr in funcs},
+                indent=4
+            )
+        else:
+            return json.dumps(
+                [self._function_to_hash(addr) for addr in funcs],
+                indent=4
+            )
+    
+    def _function_to_hash(self, addr: int) -> str:
+        txt = self._function_to_text(addr, hashable=True)
+        return sha1(txt.encode()).hexdigest()    
+
     def output(self, path: str):
         """Outputs disassembly to a file"""
 
@@ -498,6 +541,19 @@ class Disassembler:
 
         with open(path, 'w') as f:
             f.write(self._jumptable_to_text(addr))
+    
+    def output_hashes(self, path: str, no_addrs=False):
+        """Outputs hashes to a file"""
+
+        with open(path, 'w') as f:
+            f.write(
+                '\n'.join([
+                    sec.name + '\n' + self._section_to_hashes(sec, no_addrs)
+                    for sec in self._bin.sections
+                    if sec.type == SectionType.TEXT
+                ])
+                + '\n'
+            )
         
 if __name__=="__main__":
     hex_int = lambda s: int(s, 16)
@@ -514,21 +570,26 @@ if __name__=="__main__":
                         help="Generate a jumptable workaround (give start)")
     parser.add_argument("-f", "--function", type=hex_int,
                         help="Disassemble a single function (give start)")
+    parser.add_argument("--hash", action="store_true", help="Output hashes of all functions")
     parser.add_argument("-i", "--inline", action="store_true",
                         help="For --function, disassemble as CW inline asm")
     parser.add_argument("-n", "--source-name", type=str,
                         help="For --function or --jumptable, source C/C++ file name")
     parser.add_argument("-q", "--quiet", action="store_true", help="Don't print log")
+    parser.add_argument("--no-addr", action="store_true",
+                        help="For --hash, don't include addresses in output file")
     args = parser.parse_args()
 
-    incompatibles = (args.slice, args.function, args.jumptable)
+    incompatibles = (args.slice, args.function, args.jumptable, args.hash)
     if len(incompatibles) - incompatibles.count(None) > 1:
-        assert 0, "Invalid combination of --slice, --function and --jumptable"
+        assert 0, "Invalid combination of --slice, --function, --jumptable and --hash"
     if args.inline:
         assert args.function is not None, "Inline mode can only be used with --function"
     if args.source_name is not None:
         assert args.function is not None or args.jumptable is not None, \
             "Source name can only be used with --function or --jumptable"
+    if args.no_addr:
+        assert args.hash, "No addr can only be used with hash mode"
 
     binary = load_binary_yml(args.binary_path)
 
@@ -540,5 +601,7 @@ if __name__=="__main__":
         dis.output_function(args.output_path, args.function, args.inline)
     elif args.jumptable is not None:
         dis.output_jumptable(args.output_path, args.jumptable)
+    elif args.hash:
+        dis.output_hashes(args.output_path, args.no_addr)
     else:
         dis.output(args.output_path)

@@ -6,7 +6,7 @@ from bisect import bisect
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from binarybase import BinaryReader
+from binarybase import BinaryReader, BinarySection
 from fileutil import load_from_pickle, load_from_yaml
 
 @dataclass
@@ -30,6 +30,9 @@ class SymbolGetter:
     """Class to handle symbol creation and lookup"""
 
     def __init__(self, symbols_path: str, source_name: str, labels_path: str, binary: BinaryReader):
+        # Backup binary reference
+        self._bin = binary
+
         self._sym: Dict[int, Symbol] = {}
 
         # Load user symbols
@@ -72,7 +75,7 @@ class SymbolGetter:
         # Init jumptable target labels
         self._jt_targets = set()
 
-    def get_name(self, addr: int, miss_ok=False) -> str:
+    def get_name(self, addr: int, hash_mode=False, miss_ok=False) -> str:
         """Checks the name of the symbol at an address
         
         Asserts the symbol exists unless miss_ok"""
@@ -82,7 +85,10 @@ class SymbolGetter:
         sym = self._sym.get(addr)
 
         if sym is not None:
-            return sym.name
+            if hash_mode:
+                return self.get_hash_name(addr)
+            else:
+                return sym.name
         else:
             return None
 
@@ -116,7 +122,8 @@ class SymbolGetter:
     def get_containing_function(self, instr_addr: int) -> Tuple[int, int]:
         """Returns the start and end addresses of the function containing an address"""
 
-        return get_containing_function(self._f, instr_addr)
+        sec = self._bin.find_section_containing(instr_addr)
+        return get_containing_function(self._f, instr_addr, sec)
     
     def get_functions_in_range(self, start: int, end: int) -> List[int]:
         """Returns the start addresses of the functions in a range"""
@@ -128,8 +135,7 @@ class SymbolGetter:
         # Add functions until end is reached
         # TODO: bisect too?
         ret = [start]
-        while self._f[idx] != end and idx < len(self._f):
-            assert self._f[idx] < end, f"Function was expected at {end}"
+        while idx < len(self._f) and self._f[idx] < end:
             ret.append(self._f[idx])
             idx += 1
 
@@ -139,8 +145,18 @@ class SymbolGetter:
         """Creates a dummy symbol for the start of a slice"""
 
         self._sym[addr] = Symbol(f"slicedummy_{addr:x}", True)
+    
+    def reset_hash_naming(self):
+        self._hash_names = {}
+    
+    def get_hash_name(self, addr: int):
+        if addr not in self._hash_names:
+            self._hash_names[addr] = f"s_{len(self._hash_names)}"
 
-def get_containing_function(functions: List[int], instr_addr: int) -> Tuple[int, int]:
+        return self._hash_names[addr]
+
+def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySection
+                           ) -> Tuple[int, int]:
     """Returns the start and end addresses of the function containing an address from a list"""
 
     # Find first function after
@@ -154,7 +170,7 @@ def get_containing_function(functions: List[int], instr_addr: int) -> Tuple[int,
 
     # Get address after
     if idx == len(functions):
-        end = 0xffffffff
+        end = sec.addr + sec.size
     else:
         end = functions[idx]
 

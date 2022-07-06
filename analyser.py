@@ -91,6 +91,9 @@ class Labeller:
     """Class to handle label creation and lookup"""
 
     def __init__(self, binary: BinaryReader, extra_label_paths=None):
+        # Backup binary reference
+        self._bin = binary
+
         # _d maps an address to its label type
         self._d = {}
 
@@ -136,9 +139,10 @@ class Labeller:
 
         return self._d.get(addr)
     
-    def get_containing_function(self, instr_addr) -> Tuple[int, int]:
+    def get_containing_function(self, instr_addr: int) -> Tuple[int, int]:
         """Returns the start and end addresses of the function containing an address"""
 
+        sec = self._bin.find_section_containing(instr_addr)
         return get_containing_function(self._f, instr_addr)
 
     def output(self, path):
