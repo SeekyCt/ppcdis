@@ -51,7 +51,7 @@ OFFS_BSS_SIZE = 0xdc
 OFFS_ENTRY = 0xe0
 
 class DolReader(BinaryReader):
-    def __init__(self, path: str, section_defs: Dict):
+    def __init__(self, path: str, r13: int, r2: int, section_defs: Dict):
         if section_defs is not None:
             parse = lambda defs: [
                 DolSectionDef(name, **(dat if dat is not None else {}))
@@ -64,6 +64,8 @@ class DolReader(BinaryReader):
             ]
         else:
             self._section_defs = default_section_defs
+        self.r13 = r13
+        self.r2 = r2
         super().__init__(path)
 
     def _get_sections(self) -> List[BinarySection]:

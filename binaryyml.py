@@ -21,7 +21,7 @@ def load_binary_yml(path: str) -> BinaryReader:
 
     # Load binary
     if binary_type == "dol":
-        return DolReader(binary_path, yml.get("section_defs"))
+        return DolReader(binary_path, yml["r13"], yml["r2"], yml.get("section_defs"))
     elif binary_type == "rel":
         # TODO: external rels
         dol_path = yml.get("dol")

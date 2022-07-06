@@ -124,10 +124,8 @@ class DisasmLine:
         
 class Disassembler:
     def __init__(self, binary: BinaryReader, symbols_path: str, source_name:str, labels_path: str,
-                 reloc_path: str, r13: int, r2: int, overrides_path=None, quiet=False):
+                 reloc_path: str, overrides_path=None, quiet=False):
         self._bin = binary
-        self._r13 = r13
-        self._r2 = r2
         self._sym = SymbolGetter(symbols_path, source_name, labels_path, binary)
         self._rlc = RelocGetter(binary, self._sym, reloc_path)
         self._ovr = DisassemblyOverrideManager(overrides_path)
@@ -505,8 +503,6 @@ if __name__=="__main__":
     parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("labels_path", type=str, help="Labels json input path")
     parser.add_argument("relocs_path", type=str, help="Relocs json input path")
-    parser.add_argument("r13", type=hex_int, help="SDA base")
-    parser.add_argument("r2", type=hex_int, help="SDA2 base")
     parser.add_argument("output_path", type=str, help="Disassembly output path")
     parser.add_argument("-m", "--symbol-map-path", type=str, help="Symbol map input path")
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
@@ -535,7 +531,7 @@ if __name__=="__main__":
     binary = load_binary_yml(args.binary_path)
 
     dis = Disassembler(binary, args.symbol_map_path, args.source_name, args.labels_path,
-                       args.relocs_path, args.r13, args.r2, args.overrides, args.quiet)
+                       args.relocs_path, args.overrides, args.quiet)
     if args.slice is not None:
         dis.output_slice(args.output_path, *args.slice)
     elif args.function is not None:

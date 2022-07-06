@@ -9,6 +9,8 @@
 
 - `path`: path to binary
 - `section_defs`: optional section definition overrides (see below)
+- `r13`: \_SDA\_BASE\_ address from r13
+- `r2`: \_SDA2\_BASE\_ address from r2
 
 ### Rel yml
 

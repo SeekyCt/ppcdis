@@ -11,6 +11,7 @@ from typing import Dict, List, Set, Tuple
 
 from capstone import CsInsn
 from capstone.ppc import *
+from binarydol import DolReader
 
 from binaryyml import load_binary_yml
 from binarybase import BinaryReader, BinarySection, SectionType
@@ -294,12 +295,10 @@ class UpperHandler:
 class Analyser:
     """Main analysis class - finds relocations and jumptables"""
 
-    def __init__(self, binary: BinaryReader, r13: int, r2: int, overrides_path=None,
+    def __init__(self, binary: BinaryReader, overrides_path=None,
                  extra_label_paths=None, thorough=False, quiet=False):
         self._bin = binary
         self._thorough = thorough
-        self._r13 = r13
-        self._r2 = r2
         self.quiet = quiet
 
         self._lab = Labeller(binary, extra_label_paths)
@@ -401,7 +400,8 @@ class Analyser:
             return
         
         # Get base address
-        sda_base = self._r2 if reg == PPC_REG_R2 else self._r13
+        assert isinstance(self._bin, DolReader), f"SDA access outside of dol at {instr.address:x}"
+        sda_base = self._bin.r2 if reg == PPC_REG_R2 else self._bin.r13
         
         # Get offset
         if instr.id in storeLoadInsns:
@@ -935,8 +935,6 @@ if __name__=="__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Analyse a binary for its labels and relocations")
     parser.add_argument("binary_path", type=str, help="Binary input yml path")
-    parser.add_argument("r13", type=hex_int, help="SDA base")
-    parser.add_argument("r2", type=hex_int, help="SDA2 base")
     parser.add_argument("labels_path", type=str, help="Labels json output path")
     parser.add_argument("relocs_path", type=str, help="Relocs json output path")
     parser.add_argument("-l", "--extra-labels", nargs='+', help="List of extra label paths")
@@ -947,7 +945,5 @@ if __name__=="__main__":
 
     binary = load_binary_yml(args.binary_path)
 
-    anl = Analyser(
-        binary, args.r13, args.r2, args.overrides, args.extra_labels, args.thorough, args.quiet
-    )
+    anl = Analyser(binary, args.overrides, args.extra_labels, args.thorough, args.quiet)
     anl.output(args.labels_path, args.relocs_path)
