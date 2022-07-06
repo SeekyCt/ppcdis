@@ -4,22 +4,21 @@ Generates a float/double order dummy for a file
 
 from argparse import ArgumentParser
 
-from binaryargs import add_binary_args, load_binary
+from binaryyml import load_binary_yml
 from binaryrel import RelReader
 
 hex_int = lambda s: int(s, 16)
 parser = ArgumentParser(description="Generate a float/double order workaround")
-parser.add_argument("binary_path", type=str, help="Binary input path")
+parser.add_argument("binary_path", type=str, help="Binary input yml path")
 parser.add_argument("start_addr", type=hex_int, help="Floats start address")
 parser.add_argument("end_addr", type=hex_int, help="Floats end address")
 parser.add_argument("out_path", type=str, help="Text output path")
 parser.add_argument("--double", action='store_true', help="Double mode")
 parser.add_argument("--sda", action='store_true', help="Signals the floats should be in sdata2")
 parser.add_argument("--asm", action='store_true', help="Declare the floats in inline asm")
-add_binary_args(parser)
 args = parser.parse_args()
 
-binary = load_binary(args.binary_path, args)
+binary = load_binary_yml(args.binary_path)
 
 if args.double:
     func = binary.read_double

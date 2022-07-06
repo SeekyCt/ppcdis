@@ -12,7 +12,7 @@ from typing import Dict, List, Set, Tuple
 from capstone import CsInsn
 from capstone.ppc import *
 
-from binaryargs import add_binary_args, load_binary
+from binaryyml import load_binary_yml
 from binarybase import BinaryReader, BinarySection, SectionType
 from csutil import DummyInstr, check_overwrites, cs_disasm, sign_half
 from fileutil import dump_to_pickle, load_from_pickle
@@ -934,7 +934,7 @@ class Analyser:
 if __name__=="__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Analyse a binary for its labels and relocations")
-    parser.add_argument("binary_path", type=str, help="Binary input path")
+    parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("r13", type=hex_int, help="SDA base")
     parser.add_argument("r2", type=hex_int, help="SDA2 base")
     parser.add_argument("labels_path", type=str, help="Labels json output path")
@@ -943,10 +943,9 @@ if __name__=="__main__":
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
     parser.add_argument("--thorough", action="store_true", help="Thorough pointer following")
     parser.add_argument("-q", "--quiet", action="store_true", help="Don't print log")
-    add_binary_args(parser)
     args = parser.parse_args()
 
-    binary = load_binary(args.binary_path, args)
+    binary = load_binary_yml(args.binary_path)
 
     anl = Analyser(
         binary, args.r13, args.r2, args.overrides, args.extra_labels, args.thorough, args.quiet

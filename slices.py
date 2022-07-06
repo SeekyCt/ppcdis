@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
-from binaryargs import add_binary_args, load_binary
+from binaryyml import load_binary_yml
 from binarybase import BinarySection
 from fileutil import dump_to_json_str, load_from_yaml
 
@@ -177,7 +177,7 @@ def find_containing_source(sources: List[Source], addr: int) -> str:
 if __name__=="__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Query a slice yml")
-    parser.add_argument("binary_path", type=str, help="Binary input path")
+    parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("slices_path", type=str, help="Slices yml input path")
     parser.add_argument("-o", "--order-sources", action="store_true",
                         help="Output the ordered source files in json")
@@ -185,11 +185,10 @@ if __name__=="__main__":
                         help="Output the source containing an address")
     parser.add_argument("-p", "--base_path", type=str, default='',
                         help="Base path to add to source paths in yml")
-    add_binary_args(parser)
     args = parser.parse_args()
 
     # Load slices
-    binary = load_binary(args.binary_path, args)
+    binary = load_binary_yml(args.binary_path)
     sources = load_slice_yaml(args.slices_path, binary.sections, args.base_path)
 
     if args.order_sources:

@@ -10,7 +10,7 @@ import capstone
 from capstone.ppc import *
 
 from analyser import Reloc, RelocType
-from binaryargs import add_binary_args, load_binary
+from binaryyml import load_binary_yml
 from binarybase import BinaryReader, BinarySection, SectionType
 from csutil import DummyInstr, sign_half, cs_disasm 
 from instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
@@ -502,7 +502,7 @@ class Disassembler:
 if __name__=="__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Disassemble a binary")
-    parser.add_argument("binary_path", type=str, help="Binary input path")
+    parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("labels_path", type=str, help="Labels json input path")
     parser.add_argument("relocs_path", type=str, help="Relocs json input path")
     parser.add_argument("r13", type=hex_int, help="SDA base")
@@ -521,7 +521,6 @@ if __name__=="__main__":
     parser.add_argument("-n", "--source-name", type=str,
                         help="For --function or --jumptable, source C/C++ file name")
     parser.add_argument("-q", "--quiet", action="store_true", help="Don't print log")
-    add_binary_args(parser)
     args = parser.parse_args()
 
     incompatibles = (args.slice, args.function, args.jumptable)
@@ -533,7 +532,7 @@ if __name__=="__main__":
         assert args.function is not None or args.jumptable is not None, \
             "Source name can only be used with --function or --jumptable"
 
-    binary = load_binary(args.binary_path, args)
+    binary = load_binary_yml(args.binary_path)
 
     dis = Disassembler(binary, args.symbol_map_path, args.source_name, args.labels_path,
                        args.relocs_path, args.r13, args.r2, args.overrides, args.quiet)

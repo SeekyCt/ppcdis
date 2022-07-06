@@ -13,6 +13,7 @@ from elftools.elf.relocation import RelocationSection
 from elftools.elf.sections import Section
 
 from binaryrel import RelOffs, RelReader, RelSize, RelType
+from binaryyml import load_binary_yml
 from fastelf import Relocation, SHN_UNDEF, SymBadNames, SymIdMap, SymNameMap, Symbol
 
 def align_to(offs: int, align: int) -> Tuple[int, int]:
@@ -48,13 +49,13 @@ class RelReloc:
 
 class RelLinker:
     def __init__(self, dol_path: str, plf_path: str, module_id: int, num_sections=None,
-                 base_rel=None, base_rel_addr=None, base_rel_bss=None):
+                 base_rel_path=None):
         self._f = open(plf_path, 'rb')
         self.plf = ELFFile(self._f)
         self.module_id = module_id
         self.dol_symbols, self.dol_duplicates, _ = self.map_dol_symbols(dol_path)
         self.symbols, self.duplicates, self.symbols_id = Symbol.map_symbols(self._f, self.plf)
-        self._symdefs = self.map_rel_symdefs(base_rel, base_rel_addr, base_rel_bss)
+        self._symdefs = self.map_rel_symdefs(base_rel_path)
 
         if num_sections is None:
             num_sections = self.plf.num_sections()
@@ -73,7 +74,7 @@ class RelLinker:
             # Parse symbol table
             return Symbol.map_symbols(f, dol)
     
-    def map_rel_symdefs(self, base_rel: str, base_rel_addr: int, base_rel_bss: int):
+    def map_rel_symdefs(self, base_rel_path: str):
         """Maps symbols given in the relsymdef section"""
 
         # Try get section
@@ -82,8 +83,9 @@ class RelLinker:
             return {}
 
         # Try load  base rel
-        assert base_rel is not None, f"relsymdef section found but no base rel given"
-        base = RelReader(None, base_rel, base_rel_addr, base_rel_bss)
+        assert base_rel_path is not None, f"relsymdef section found but no base rel given"
+        base = load_binary_yml(base_rel_path)
+        assert isinstance(base, RelReader)
         
         # Load defs
         rela: RelocationSection = self.plf.get_section_by_name(".relarelsymdef")
@@ -389,9 +391,7 @@ if __name__=="__main__":
     parser.add_argument("-o", "--out", type=str, help="REL output path")
     parser.add_argument("-m", "--module-id", type=int, default=1, help="Output module ID")
     parser.add_argument("-n", "--num-sections", type=int, help="Forced number of sections")
-    parser.add_argument("-r", "--base-rel", type=str, help="Base rel for sym defs")
-    parser.add_argument("-a", "--base-rel-addr", type=hex_int, help="Base rel address")
-    parser.add_argument("-b", "--base-rel-bss", type=hex_int, help="Base rel bss address")
+    parser.add_argument("-r", "--base-rel", type=str, help="Base rel yml for sym defs")
     args = parser.parse_args()
 
     dol_path = args.dol_input
@@ -410,10 +410,5 @@ if __name__=="__main__":
 
     num_sections = args.num_sections
 
-    if args.base_rel is not None:
-        assert args.base_rel_addr is not None, "--base-rel-addr is rqeuired for --base-rel"
-        assert args.base_rel_bss is not None, "--base-rel-bss is rqeuired for --base-rel"
-
-    linker = RelLinker(dol_path, in_path, module_id, num_sections,
-                       args.base_rel, args.base_rel_addr, args.base_rel_bss)
+    linker = RelLinker(dol_path, in_path, module_id, num_sections, args.base_rel)
     linker.link_rel(out_path)

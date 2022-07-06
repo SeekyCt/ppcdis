@@ -3,7 +3,7 @@ Binary reader for DOL files
 """
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from binarybase import BinaryReader, BinarySection, SectionType
 
@@ -51,9 +51,19 @@ OFFS_BSS_SIZE = 0xdc
 OFFS_ENTRY = 0xe0
 
 class DolReader(BinaryReader):
-    # TODO: expose changing section_defs to command line args
-    def __init__(self, path: str, section_defs=default_section_defs):
-        self._section_defs = section_defs
+    def __init__(self, path: str, section_defs: Dict):
+        if section_defs is not None:
+            parse = lambda defs: [
+                DolSectionDef(name, **(dat if dat is not None else {}))
+                for name, dat in defs.items()
+            ]
+            self._section_defs = [
+                parse(section_defs["text"]),
+                parse(section_defs["data"]),
+                parse(section_defs["bss"])
+            ]
+        else:
+            self._section_defs = default_section_defs
         super().__init__(path)
 
     def _get_sections(self) -> List[BinarySection]:

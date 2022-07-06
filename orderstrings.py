@@ -4,22 +4,21 @@ Generates a string order dummy for a file
 
 from argparse import ArgumentParser
 
-from binaryargs import add_binary_args, load_binary
+from binaryyml import load_binary_yml
 from binaryrel import RelReader
 
 # TODO: non-pooled string support
 
 hex_int = lambda s: int(s, 16)
 parser = ArgumentParser(description="Generate a string order workaround")
-parser.add_argument("binary_path", type=str, help="Binary input path")
+parser.add_argument("binary_path", type=str, help="Binary input yml path")
 parser.add_argument("start_addr", type=hex_int, help="Stringbase start address")
 parser.add_argument("end_addr", type=hex_int, help="Stringbase end address")
 parser.add_argument("out_path", type=str, help="Text output path")
 parser.add_argument("--enc", "-e", type=str, default="utf8")
-add_binary_args(parser)
 args = parser.parse_args()
 
-binary = load_binary(args.binary_path, args)
+binary = load_binary_yml(args.binary_path)
 
 curStr = bytearray()
 strs = []

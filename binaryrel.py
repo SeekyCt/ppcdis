@@ -4,7 +4,7 @@ Binary reader for REL files
 
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from binarybase import BinaryReader, BinarySection, SectionType
 from binarydol import DolReader
@@ -72,6 +72,7 @@ class RelBinarySection(BinarySection):
         super().__init__(name, type, offset, addr, size, attr, align)
         self.rel_idx = rel_idx
 
+# TODO: this can probably just be merged with DolSectionDef
 @dataclass
 class RelSectionDef:
     """Container used for external code to define sections"""
@@ -90,18 +91,30 @@ default_section_defs = [
         RelSectionDef(".rodata"),
         RelSectionDef(".data")
     ],
-    # BSS
-    RelSectionDef(".bss")
+    [ # BSS
+        RelSectionDef(".bss")
+    ]
 ]
 
 class RelReader(BinaryReader):
     def __init__(self, dol: DolReader, path: str, base_addr: int, bss_addr: int,
-                 section_defs=default_section_defs):
+                 section_defs: Dict):
         # Handle params
         self._dol = dol
         self._base_addr = base_addr
         self._bss_addr = bss_addr
-        self._section_defs = section_defs
+        if section_defs is not None:
+            parse = lambda defs: [
+                RelSectionDef(name, **(dat if dat is not None else {}))
+                for name, dat in defs.items()
+            ]
+            self._section_defs = [
+                parse(section_defs["text"]),
+                parse(section_defs["data"]),
+                parse(section_defs["bss"])
+            ]
+        else:
+            self._section_defs = default_section_defs
 
         # Keep an internal map of the sections including the empty ones (for reloc indices)
         self._rel_sections = []
@@ -232,7 +245,9 @@ class RelReader(BinaryReader):
         """Finds the sections in a binary"""
 
         # Get section definitions
-        text_defs, data_defs, bss_def = self._section_defs
+        text_defs, data_defs, bss_defs = self._section_defs
+        assert len(bss_defs) <= 1, "Rel only supports 1 bss section"
+        bss_def = bss_defs[0]
          
         # Read header
         bss_size = self.read_word(RelOffs.BSS_SIZE, True)

@@ -3,6 +3,44 @@
 - All ranges have an inclusive start and exclusive end
 - Using float constants in inline assembly when compiling with `-ipa file` will cause them all to be placed at the start of the `.sdata2` section, which will stop matching being possible when other data is supposed to be inbetween them. The `manual_sdata2_ranges` override can be used to work around this by referring to them with labels instead (defined through CW's colon syntax or `relsymdefs` in orderfloats).
 
+## Binary yml formats
+
+### Dol yml
+
+- `path`: path to binary
+- `section_defs`: optional section definition overrides (see below)
+
+### Rel yml
+
+- `path`: path to binary
+- `address`: address the binary loads at
+- `bss_address`: address the binary's bss allocates at
+- `section_defs`: optional section definition overrides (see below)
+
+### section_defs format
+
+The format is:
+```yml
+section_defs:
+    text:
+        section1:
+            prop1: val
+            ...
+        ...
+    data:
+        section1:
+            ...
+        ...
+    bss:
+        section1:
+            ...
+        ...
+```
+
+The properties of a section are:
+    - `attr` (optional) attributes given to the section in disassembly
+    - `align` (optional) alignment of the section
+
 ## Analyser
 
 The analyser analyses the code in a binary to identify things like relocations, functions, labels and jumptables. This is required for the disassembler.
