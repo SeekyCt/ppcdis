@@ -132,6 +132,8 @@ class Disassembler:
         self.quiet = quiet
     
     def print(self, msg: str):
+        """Prints a message if not in quiet mode"""
+
         if not self.quiet:
             print(msg)
 
