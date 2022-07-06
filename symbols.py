@@ -149,7 +149,7 @@ class SymbolGetter:
     def reset_hash_naming(self):
         self._hash_names = {}
     
-    def get_hash_name(self, addr: int):
+    def get_hash_name(self, addr: int) -> str:
         if addr not in self._hash_names:
             self._hash_names[addr] = f"s_{len(self._hash_names)}"
 
