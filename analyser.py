@@ -412,9 +412,10 @@ class Analyser:
             offs = instr.operands[1].mem.disp
         else:
             offs = sign_half(instr.operands[2].imm)
-
-        # Queue for postprocessing
-        self._sda[instr.address] = sda_base + offs
+        
+        # Queue for postprocessing if not blocked
+        if not self._ovr.is_blocked(instr.address, sda_base + offs):
+            self._sda[instr.address] = sda_base + offs
     
     def _process_sda_override(self, instr: CsInsn):
         """Handles r13/r2 overwrites"""

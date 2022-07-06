@@ -248,6 +248,8 @@ class Disassembler:
             if ref.t == RelocType.NORMAL:
                 rel = '@l'
             else:
+                # TODO: bring back in some form when adding GCC, useless for now
+                """
                 # Check if actual relocation can be used
                 if self._bin.addr_is_local(ref.target):
                     rel = '@sda21'
@@ -255,6 +257,11 @@ class Disassembler:
                 else:
                     rel = "-_SDA2_BASE_" if reg == PPC_REG_R2 else "-_SDA_BASE_"
                     self._external_sda = True
+                """
+                assert self._bin.addr_is_local(ref.target), f"SDA reference outside of binary" \
+                    "(probably overwritten r2 that needs pointer block override)"
+                rel = '@sda21'
+                reg_name = "0"
                 assert reg in (PPC_REG_R13, PPC_REG_R2), f"Bad reloc {ref}"
 
             # Update operands
