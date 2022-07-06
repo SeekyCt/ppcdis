@@ -524,7 +524,7 @@ class Disassembler:
             f"Slice {sl} crosses section boundary"
 
         # DEVKITPPC r40+ can give issues with slices not starting with symbols
-        if self._sym.get_name(start, True) is None:
+        if self._sym.get_name(start, miss_ok=True) is None:
             self._sym.create_slice_label(start)
 
         with open(path, 'w') as f:
@@ -581,7 +581,7 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     incompatibles = (args.slice, args.function, args.jumptable, args.hash)
-    if len(incompatibles) - incompatibles.count(None) > 1:
+    if len(incompatibles) - (incompatibles.count(None) + incompatibles.count(False)) > 1:
         assert 0, "Invalid combination of --slice, --function, --jumptable and --hash"
     if args.inline:
         assert args.function is not None, "Inline mode can only be used with --function"

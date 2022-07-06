@@ -143,7 +143,7 @@ class Labeller:
         """Returns the start and end addresses of the function containing an address"""
 
         sec = self._bin.find_section_containing(instr_addr)
-        return get_containing_function(self._f, instr_addr)
+        return get_containing_function(self._f, instr_addr, sec)
 
     def output(self, path):
         """Outputs all labelled addresses and their types to json
