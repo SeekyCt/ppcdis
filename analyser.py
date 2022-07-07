@@ -687,9 +687,8 @@ class Analyser:
                     # tprint(f"Jumptable {jtbl_ctr:x} to stage 3 at {addr:x}")
                 elif jtbl_ctr is not None:
                     # Next bctr is not a jumptable use
-                    jtbl_ctr = None
-
                     # tprint(f"Jumptable {jtbl_ctr:x} destroyed by mctr at {addr:x}")
+                    jtbl_ctr = None
 
             # Final codewarrior jumptable heuristic stage - bctr from the jumptable
             if instr.id == PPC_INS_BCTR and jtbl_ctr is not None:
