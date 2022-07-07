@@ -692,21 +692,13 @@ class Analyser:
 
             # Final codewarrior jumptable heuristic stage - bctr from the jumptable
             if instr.id == PPC_INS_BCTR and jtbl_ctr is not None:
-                # tprint(f"Jumptable {jtbl_ctr:x} to final stage at {addr:x}")
+                # tprint(f"Queuing jumptable {jtbl_ctr:x}")
 
-                # Jumptable destinations start immediately after the bctr
-                # These will have been incorrectly marked as maybe functions from the pointers
-                if self._lab.check_label_type(addr + 4) == LabelType.MAYBE_FUNCTION:
-                    # tprint(f"Queuing jumptable {jtbl_ctr:x}")
-
-                    # Save context and queue for later
-                    # Processing later allows for back-to-back jumptables to be split more easily
-                    jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), None)
-                    self._jt[jtbl_ctr] = (section, addr, uppers.copy(), visited.copy(),
-                                          jumptables_copy, changed_r13, changed_r2)
-                else:
-                    pass
-                    # tprint(f"Discard jumptable {jtbl_ctr:x} at {addr:x}, addr+4 not function")
+                # Save context and queue for later
+                # Processing later allows for back-to-back jumptables to be split more easily
+                jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), None)
+                self._jt[jtbl_ctr] = (section, addr, uppers.copy(), visited.copy(),
+                                        jumptables_copy, changed_r13, changed_r2)
 
                 # Jumptable pointers are only used once
                 jtbl_ctr = None
