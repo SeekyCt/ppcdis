@@ -342,8 +342,8 @@ class Disassembler:
                     dat = self._bin.read(p, 4)
                     ref = self._rlc.get_reference_at(p)
                     if ref is not None:
-                        self.print(f"Warning: reference to {ref.target:x} at {p:x} ignored, "
-                                   "data is split below word alignment")
+                        print(f"Warning: reference to {ref.target:x} at {p:x} ignored, "
+                              "data is split below word alignment")
                     
                     # Split into individual bytes if a non-aligned reference falls within this word
                     for i in range(4):
