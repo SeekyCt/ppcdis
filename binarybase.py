@@ -31,6 +31,7 @@ class BinarySection:
     addr: int
     size: int
     attr: str = None
+    nobits: bool = False
 
     def contains_offs(self, offs: int) -> bool:
         """Checks if the section contains an offset relative to the whole binary"""
@@ -55,11 +56,20 @@ class BinarySection:
     def get_start_text(self) -> str:
         """Gets the text to start a section in disassembly"""
 
+        # Add name
+        parts = [f".section {self.name}"]
+        
+        # Add attr
         if self.attr is not None:
-            attr = f", \"{self.attr}\""
-        else:
-            attr = ""
-        return f".section {self.name}{attr}\n"
+            parts.append(f"\"{self.attr}\"")
+        elif self.nobits:
+            parts.append("\"\"")
+
+        # Add nobits
+        if self.nobits:
+            parts.append("@nobits")
+        
+        return ", ".join(parts)
 
     def get_balign(self) -> str:
         """Gets the balign text to start a slice with in disassembly"""
