@@ -16,7 +16,7 @@ class Symbol:
     global_scope: bool
 
 # Symbols that require a symbol name to be quoted by the GCC assembler
-GCC_BAD_CHARS = {"@", '\\'} # TODO: more
+GCC_BAD_CHARS = {"@", '\\', '<', '>'} # TODO: more?
 
 def name_filt(name):
     """Quotes a name if required"""
