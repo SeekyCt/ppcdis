@@ -210,13 +210,9 @@ The binary categories (the filename as passed in command line arguments without 
 
 The source file categories (source file path as passed in with `--source-name`) give symbols that apply to the source file.
 
-## doldiff
+## binarydiff
 
-Prints any differing sections in a dol file.
-
-## reldiff
-
-Prints any differing sections in a rel file, and any differing relocations if the sections match.
+Prints any differing sections in a dol or rel file, and any differing relocations in a rel file. Takes a binary yml for the matching binary, and the path of the testing binary (properties from the yml are re-used for this too).
 
 ## elf2dol
 

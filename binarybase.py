@@ -234,3 +234,9 @@ class BinaryReader(ABC):
         
         dat = self.read(section.offset, section.size, True)
         return sha1(dat).digest()
+
+    @abstractmethod
+    def load_other(self, path: str) -> "BinaryReader":
+        """Loads another binary of the same type with the same settings"""
+
+        raise NotImplementedError

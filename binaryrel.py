@@ -103,6 +103,7 @@ class RelReader(BinaryReader):
         self._dol = dol
         self._base_addr = base_addr
         self._bss_addr = bss_addr
+        self._section_defs_raw = section_defs
         if section_defs is not None:
             parse = lambda defs: [
                 RelSectionDef(name, **(dat if dat is not None else {}))
@@ -347,3 +348,8 @@ class RelReader(BinaryReader):
         """Converts an offset into a section to an address (for relocations)"""
 
         return self.sections[section_id].addr + offs
+
+    def load_other(self, path: str) -> "RelReader":
+        """Loads another binary of the same type with the same settings"""
+
+        return RelReader(self._dol, path, self._base_addr, self._bss_addr, self._section_defs_raw)

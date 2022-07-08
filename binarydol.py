@@ -52,6 +52,7 @@ OFFS_ENTRY = 0xe0
 
 class DolReader(BinaryReader):
     def __init__(self, path: str, r13: int, r2: int, section_defs: Dict):
+        self._section_defs_raw = section_defs
         if section_defs is not None:
             parse = lambda defs: [
                 DolSectionDef(name, **(dat if dat is not None else {}))
@@ -157,3 +158,8 @@ class DolReader(BinaryReader):
         
         # Not found
         return None
+
+    def load_other(self, path: str) -> "DolReader":
+        """Loads another binary of the same type with the same settings"""
+
+        return DolReader(path, self.r13, self.r2, self._section_defs_raw)
