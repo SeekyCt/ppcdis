@@ -47,7 +47,7 @@ def diff_secs(good: BinaryReader, test: BinaryReader) -> bool:
             s1.size != s2.size
         ):
             any_diff = True
-            print(f"Section {i}")
+            print(f"Section {i} {s1.name}")
             print_diff("Offset", s1.offset, s2.offset)
             print_diff("Address", s1.addr, s2.addr)
             print_diff("Size", s1.size, s2.size)
