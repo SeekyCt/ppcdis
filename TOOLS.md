@@ -250,6 +250,10 @@ Generates a dummy function to order the string constants in a file.
 
 When given `--enc name`, the encoding can be changed to any encoding supported by python. This applies to both the string parsing and the output file encoding.
 
+### Pooling
+
+If the code is compiled with `-str pool`, then `--pool` needs to be passed so that the tool searches for non-aligned strings in the range.
+
 ## slices
 
 Gives utilities for querying a slices yml. The output format for describing a source is a json in one of the following formats:
