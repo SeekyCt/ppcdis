@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+    extern "C" {
+#endif
+
 // Unknown function declaration
 
 #define UNKNOWN_FUNCTION(name) void name(void)
@@ -133,3 +137,7 @@ void __cvt_sll_flt(void);
 void __cvt_ull_flt(void);
 void __cvt_dbl_usll(void);
 void __cvt_dbl_ull(void);
+
+#ifdef __cplusplus
+    }
+#endif
