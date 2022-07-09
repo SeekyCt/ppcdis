@@ -80,14 +80,15 @@ with open(args.out_path, 'w', encoding=args.enc) as f:
         "#ifndef SHIFTABLE",
         matching_at,
         f"void {func}();",
-        "FORCEACTIVE_START",
+        "#pragma push",
+        "#pragma force_active on",
         f"void FORCESTRIP {func}() {{",
         '\n'.join((
             f"    __dummy_str(\"{str}\");"
             for str in strs
         )),
         "}",
-        "FORCEACTIVE_END",
+        "#pragma pop",
         "#else",
         shiftable_at,
         "};",

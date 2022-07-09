@@ -462,7 +462,10 @@ class Disassembler:
             name = f"jthack_{extra_addr:x}"
             extra = '\n'.join((
                 f"__declspec(section \".data\") char * {name} = (char *){sym} + {final};",
-                f"FORCEACTIVE_DATA({name})"
+                "#pragma push",
+                "#pragma force_active on",
+                f"DUMMY_POINTER({name})",
+                "#pragma pop"
             ))
         else:
             extra = ""

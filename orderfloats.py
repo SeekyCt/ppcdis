@@ -50,7 +50,8 @@ with open(args.out_path, 'w', encoding="shift-jis") as f:
     f.write('\n'.join((
         "#ifndef SHIFTABLE",
         f"void {name}();",
-        "FORCEACTIVE_START",
+        "#pragma push",
+        "#pragma force_active on",
         f"{asm}void FORCESTRIP {name}() {{",
         '\n'.join(
             f"    {action.format(fl)};"
@@ -67,5 +68,5 @@ with open(args.out_path, 'w', encoding="shift-jis") as f:
             for fl, addr in floats
         ),
         "#endif\n",
-        "FORCEACTIVE_END"
+        "#pragma pop"
     )))

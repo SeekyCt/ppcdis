@@ -24,6 +24,18 @@ void __dummy_pointer(const void *);
     #define FORCESTRIP
 #endif
 
+// Wrap in force_active pragmas to force a piece of data active
+#define DUMMY_POINTER(name) \
+    void dummy_ptr_##name(); \
+    void FORCESTRIP dummy_ptr_##name() \
+    { \
+        __dummy_pointer((const void *)&name); \
+    }
+
+// Unfortunately these don't work on older compilers
+
+#if __MWERKS__ >= 0x4199
+
 // Disable deadstripping for a region
 
 #define FORCEACTIVE_START _Pragma("push") \
@@ -34,12 +46,10 @@ void __dummy_pointer(const void *);
 
 #define FORCEACTIVE_DATA(name) \
     FORCEACTIVE_START \
-    void forceactive_##name(); \
-    void FORCESTRIP forceactive_##name() \
-    { \
-        __dummy_pointer((const void *)&name); \
-    } \
+    DUMMY_POINTER(name) \
     FORCEACTIVE_END
+
+#endif
 
 // Rel symbol definition
 
