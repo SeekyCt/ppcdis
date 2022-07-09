@@ -41,8 +41,6 @@ for addr in range(args.start_addr, args.end_addr):
 assert len(curStr) == 0, "Non-terminating string at end"
 
 with open(args.out_path, 'w', encoding=args.enc) as f:
-    f.write("#ifndef SHIFTABLE\n")
-
     addr = args.start_addr
     lab = f"lbl_{addr:x}"
     func = f"order_strings_{addr:x}"
@@ -54,6 +52,7 @@ with open(args.out_path, 'w', encoding=args.enc) as f:
     else:
         at = f"char {lab}[] : 0x{addr:x};"
     f.write('\n'.join((
+        "#ifndef SHIFTABLE",
         at,
         f"void {func}();",
         "FORCEACTIVE_START",
@@ -63,6 +62,7 @@ with open(args.out_path, 'w', encoding=args.enc) as f:
             for str in strs
         )),
         "}",
+        "FORCEACTIVE_END",
         "#else",
         f"static char {lab}[] = {{",
         '\n'.join((
@@ -70,6 +70,5 @@ with open(args.out_path, 'w', encoding=args.enc) as f:
             for str in strs
         )),
         "};",
-        "#endif\n",
-        "FORCEACTIVE_END"
+        "#endif\n"
     )))
