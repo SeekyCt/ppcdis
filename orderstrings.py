@@ -15,7 +15,7 @@ parser.add_argument("binary_path", type=str, help="Binary input yml path")
 parser.add_argument("start_addr", type=hex_int, help="Stringbase start address")
 parser.add_argument("end_addr", type=hex_int, help="Stringbase end address")
 parser.add_argument("out_path", type=str, help="Text output path")
-parser.add_argument("--enc", "-e", type=str, default="utf8")
+parser.add_argument("--enc", "-e", type=str, default="utf8", help="String & output file encoding")
 args = parser.parse_args()
 
 binary = load_binary_yml(args.binary_path)
