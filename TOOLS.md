@@ -154,7 +154,11 @@ When given `--jumptable addr`, the disassembler outputs a C jumptable workaround
 
 ### Function generation
 
-When given `--function addr`, the disassembler outputs the assembly of a single function and its jumptables, for use on decomp.me, m2c, or just manual inspection.
+When given `--function addr`, the disassembler outputs the assembly of a single function for use with decomp.me, m2c, or just manual inspection.
+
+#### Extra Data
+
+When given `--extra` with `--function`, extra data referenced by the function is included. This is currently limited to jumptables.
 
 ### Inline function generation
 
