@@ -380,7 +380,7 @@ class Disassembler:
             self._disasm_range(section, section.addr, section.addr + section.size)
         )
     
-    def _function_to_text(self, addr: int, inline=False, hashable=False) -> str:
+    def _function_to_text(self, addr: int, inline=False, extra=False, hashable=False) -> str:
         """Outputs the disassembly of a single function to text"""
 
         self.print(f"Disassemble function {addr:x}")
@@ -399,7 +399,7 @@ class Disassembler:
         ret = [self._disasm_range(sec, start, end, inline, hashable).lstrip('\n')]
 
         # Add jumptables if wanted
-        if not inline and not hashable:
+        if extra:
             # Get jumptables
             jumptables = self._rlc.get_referencing_jumptables(start, end)
 
@@ -540,11 +540,11 @@ class Disassembler:
         with open(path, 'w') as f:
             f.write(".include \"macros.inc\"\n\n" + self._slice_to_text(section, sl) + '\n')
     
-    def output_function(self, path: str, addr: int, inline: bool):
+    def output_function(self, path: str, addr: int, inline: bool, extra: bool):
         """Outputs a function's disassembly to a file"""
 
         with open(path, 'w') as f:
-            f.write(self._function_to_text(addr, inline))
+            f.write(self._function_to_text(addr, inline, extra))
     
     def output_jumptable(self, path: str, addr: int):
         """Outputs a jumptable C workaround to a file"""
@@ -583,6 +583,8 @@ if __name__=="__main__":
     parser.add_argument("--hash", action="store_true", help="Output hashes of all functions")
     parser.add_argument("-i", "--inline", action="store_true",
                         help="For --function, disassemble as CW inline asm")
+    parser.add_argument("-e", "--extra", action="store_true",
+                        help="For --function, include referenced jumptables")
     parser.add_argument("-n", "--source-name", type=str,
                         help="For --function or --jumptable, source C/C++ file name")
     parser.add_argument("-q", "--quiet", action="store_true", help="Don't print log")
@@ -595,6 +597,7 @@ if __name__=="__main__":
         assert 0, "Invalid combination of --slice, --function, --jumptable and --hash"
     if args.inline:
         assert args.function is not None, "Inline mode can only be used with --function"
+        assert not args.extra, "Inline mode can't be used with --extra"
     if args.source_name is not None:
         assert args.function is not None or args.jumptable is not None, \
             "Source name can only be used with --function or --jumptable"
@@ -608,7 +611,7 @@ if __name__=="__main__":
     if args.slice is not None:
         dis.output_slice(args.output_path, *args.slice)
     elif args.function is not None:
-        dis.output_function(args.output_path, args.function, args.inline)
+        dis.output_function(args.output_path, args.function, args.inline, args.extra)
     elif args.jumptable is not None:
         dis.output_jumptable(args.output_path, args.jumptable)
     elif args.hash:
