@@ -2,12 +2,14 @@
 Helpers for address naming
 """
 
+from argparse import ArgumentParser
 from bisect import bisect
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from binarybase import BinaryReader, BinarySection
-from fileutil import load_from_pickle, load_from_yaml
+from binaryyml import load_binary_yml
+from fileutil import dump_to_json_str, load_from_pickle, load_from_yaml
 
 @dataclass
 class Symbol:
@@ -175,3 +177,37 @@ def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySe
         end = functions[idx]
 
     return start, end
+
+def reverse_lookup(yml: Dict, binary: str, source_name: str, name: str) -> int:
+    for items in (
+        yml.get("global", {}).items(),
+        yml.get(binary, {}).items(),
+        yml.get(source_name, {}).items()
+    ):
+        for key, val in items:
+            if val == name:
+                return key
+    
+    # Not found
+    return None
+
+if __name__=="__main__":
+    parser = ArgumentParser()
+    parser.add_argument("symbol_map_path", type=str, help="Symbol map input path")
+    parser.add_argument("name", type=str, help="Symbol name")
+    parser.add_argument("-b", "--binary", type=str, help="Binary input yml path")
+    parser.add_argument("-n", "--source-name", type=str, help="Source C/C++ file name")
+    args = parser.parse_args()
+
+    # Load binary
+    binary = load_binary_yml(args.binary).name if args.binary is not None else None
+
+    # Load symbols
+    yml = load_from_yaml(args.symbol_map_path)
+
+    # Find addr
+    addr = reverse_lookup(yml, binary, args.source_name, args.name)
+    assert addr is not None, f"Symbol {args.name} not found"
+
+    # Get name
+    print(dump_to_json_str(addr))
