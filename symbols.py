@@ -179,17 +179,36 @@ def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySe
     return start, end
 
 def reverse_lookup(yml: Dict, binary: str, source_name: str, name: str) -> int:
-    for items in (
-        yml.get("global", {}).items(),
-        yml.get(binary, {}).items(),
-        yml.get(source_name, {}).items()
-    ):
-        for key, val in items:
-            if val == name:
-                return key
+    """Gets a symbol address from a yml by name"""
+
+    # Try globals first
+    for key, val in yml.get("global", {}).items():
+        if val == name:
+            return key
+
+    # Find matches in other categories
+    matches = {}
+    for cat in yml:
+        if cat == "global":
+            continue
     
-    # Not found
-    return None
+        for key, val in yml[cat].items():
+            if val == name:
+                matches[cat] = key
+    
+    # Check given source name and binary first
+    if source_name in matches:
+        return matches[source_name]
+    if binary in matches:
+        return matches[binary]
+    
+    # Try other matches
+    if len(matches) > 1:
+        assert 0, f"Ambiguous symbol {name} ({matches})"
+    elif len(matches) == 1:
+        return [matches[cat] for cat in matches][0]
+    else:
+        assert 0, f"Symbol {name} not found"
 
 if __name__=="__main__":
     parser = ArgumentParser()
