@@ -14,6 +14,7 @@ class DolSectionDef:
     name: str
     attr: str = None
     nobits: bool = False
+    balign: int = None
 
 default_section_defs = [
     [ # Text
@@ -95,10 +96,12 @@ class DolReader(BinaryReader):
         
         # Makes section list
         sections = [
-            BinarySection(sdef.name, SectionType.TEXT, offs, addr, size, sdef.attr, sdef.nobits)
+            BinarySection(sdef.name, SectionType.TEXT, offs, addr, size, sdef.attr, sdef.nobits,
+                          sdef.balign)
             for sdef, offs, addr, size in zip(text_defs, text_offsets, text_addresses, text_sizes)
         ] + [
-            BinarySection(sdef.name, SectionType.DATA, offs, addr, size, sdef.attr, sdef.nobits)
+            BinarySection(sdef.name, SectionType.DATA, offs, addr, size, sdef.attr, sdef.nobits,
+                          sdef.balign)
             for sdef, offs, addr, size in zip(data_defs, data_offsets, data_addresses, data_sizes)
         ]
         sections.sort(key=lambda s: s.addr)
@@ -117,7 +120,7 @@ class DolReader(BinaryReader):
                 sdef = bss_defs[bss_n]
                 sections_with_bss.append(
                     BinarySection(sdef.name, SectionType.BSS, 0, bss_start,
-                                  section.addr - bss_start, sdef.attr, sdef.nobits)
+                                  section.addr - bss_start, sdef.attr, sdef.nobits, sdef.balign)
                 )
                 bss_n += 1
                 bss_start = section.addr + section.size
@@ -128,8 +131,8 @@ class DolReader(BinaryReader):
         if bss_start < bss_end:
             sdef = bss_defs[bss_n]
             sections_with_bss.append(
-                BinarySection(sdef.name, SectionType.BSS, 0, bss_start,
-                              bss_end - bss_start, sdef.attr, sdef.nobits)
+                BinarySection(sdef.name, SectionType.BSS, 0, bss_start, bss_end - bss_start,
+                              sdef.attr, sdef.nobits, sdef.balign)
             )
 
         return sections_with_bss

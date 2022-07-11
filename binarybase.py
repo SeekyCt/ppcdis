@@ -32,6 +32,7 @@ class BinarySection:
     size: int
     attr: str = None
     nobits: bool = False
+    balign: int = None
 
     def contains_offs(self, offs: int) -> bool:
         """Checks if the section contains an offset relative to the whole binary"""
@@ -74,7 +75,10 @@ class BinarySection:
     def get_balign(self) -> str:
         """Gets the balign text to start a slice with in disassembly"""
 
-        return "\n.balign 8\n" if self.type != SectionType.TEXT else ""
+        if self.balign is None:
+            return "\n.balign 8\n" if self.type != SectionType.TEXT else ""
+        else:
+            return f"\n.balign {self.balign}\n"
 
     def __repr__(self) -> str:
         """String representation for debugging"""
