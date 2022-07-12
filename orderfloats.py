@@ -58,6 +58,7 @@ with open(args.out_path, 'w', encoding="shift-jis") as f:
             for fl, addr in floats
         ),
         "}",
+        "#pragma pop",
         '\n'.join(
             at.format(t=t, lab=f"lbl_{addr:x}", addr=addr, sda=sda)
             for fl, addr in floats
@@ -67,6 +68,5 @@ with open(args.out_path, 'w', encoding="shift-jis") as f:
             f"static const {t} lbl_{addr:x} = {fl};"
             for fl, addr in floats
         ),
-        "#endif\n",
-        "#pragma pop"
+        "#endif\n"
     )))
