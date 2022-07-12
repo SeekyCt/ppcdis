@@ -178,6 +178,38 @@ def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySe
 
     return start, end
 
+def lookup(yml: Dict, binary: str, source_name: str, addr: int) -> str:
+    """Gets a symbol name from a yml by address"""
+
+    # Try globals first
+    ret = yml.get("global", {}).get(addr)
+    if ret is not None:
+        return ret
+
+    # Find matches in other categories
+    matches = {}
+    for cat in yml:
+        if cat == "global":
+            continue
+        
+        if addr in yml[cat]:
+            matches[cat] = yml[cat]
+    
+    # Check given source name and binary first
+    if source_name in matches:
+        assert not binary in matches, f"Ambiguous symbol {addr:x} ({matches})"
+        return matches[source_name]
+    if binary in matches:
+        return matches[binary]
+    
+    # Try other matches
+    if len(matches) > 1:
+        assert 0, f"Ambiguous symbol {addr:x} ({matches})"
+    elif len(matches) == 1:
+        return [matches[cat] for cat in matches][0]
+    else:
+        return None
+
 def reverse_lookup(yml: Dict, binary: str, source_name: str, name: str) -> int:
     """Gets a symbol address from a yml by name"""
 
@@ -198,6 +230,7 @@ def reverse_lookup(yml: Dict, binary: str, source_name: str, name: str) -> int:
     
     # Check given source name and binary first
     if source_name in matches:
+        assert not binary in matches, f"Ambiguous symbol {name} ({matches})"
         return matches[source_name]
     if binary in matches:
         return matches[binary]
@@ -208,15 +241,22 @@ def reverse_lookup(yml: Dict, binary: str, source_name: str, name: str) -> int:
     elif len(matches) == 1:
         return [matches[cat] for cat in matches][0]
     else:
-        assert 0, f"Symbol {name} not found"
+        return None
 
 if __name__=="__main__":
     parser = ArgumentParser()
+    hex_int = lambda s: int(s, 16)
     parser.add_argument("symbol_map_path", type=str, help="Symbol map input path")
-    parser.add_argument("name", type=str, help="Symbol name")
+    parser.add_argument("--get-name", type=hex_int, help="Get symbol name for address")
+    parser.add_argument("--get-addr", type=str, help="Get address for symbol name")
     parser.add_argument("-b", "--binary", type=str, help="Binary input yml path")
     parser.add_argument("-n", "--source-name", type=str, help="Source C/C++ file name")
+    parser.add_argument("-r", "--readable", action="store_true",
+                        help="Output as text rather than json")
     args = parser.parse_args()
+
+    assert (args.get_name, args.get_addr).count(None) == 1, \
+           "One of --get-name and --get-addr is required"
 
     # Load binary
     binary = load_binary_yml(args.binary).name if args.binary is not None else None
@@ -224,9 +264,17 @@ if __name__=="__main__":
     # Load symbols
     yml = load_from_yaml(args.symbol_map_path)
 
-    # Find addr
-    addr = reverse_lookup(yml, binary, args.source_name, args.name)
-    assert addr is not None, f"Symbol {args.name} not found"
-
-    # Get name
-    print(dump_to_json_str(addr))
+    if args.get_addr is not None:
+        addr = reverse_lookup(yml, binary, args.source_name, args.get_addr)
+        if args.readable:
+            assert addr is not None, "Not found"
+            print(hex(addr))
+        else:
+            print(dump_to_json_str(addr))
+    else:
+        name = lookup(yml, binary, args.source_name, args.get_name)
+        if args.readable:
+            assert name is not None, "Not found"
+            print(name)
+        else:
+            print(dump_to_json_str(name))

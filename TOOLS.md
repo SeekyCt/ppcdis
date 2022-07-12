@@ -285,3 +285,23 @@ sourceName1:
 sourceName2:
 ...
 ```
+
+## symbols
+
+Gives utilities for querying a symbols yml.
+
+### Get name
+
+When given `--get-name addr`, the tool gives the name of the symbol at that address, or null if not found.
+
+### Get address
+
+When given `--get-addr name`, the tool gives the address of the symbol with that name, or null if not found.
+
+### Source name
+
+When given `--source-name name`, the tool uses this as the source file name to get file-local symbols from the symbols yml.
+
+### Binary name
+
+When given `--binary path`, the tool uses the binary name in this to get binary-local symbols from the symbols yml.
