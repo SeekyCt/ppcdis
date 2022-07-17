@@ -86,8 +86,8 @@ default_section_defs = [
         RelSectionDef(".text")
     ],
     [ # Data
-        RelSectionDef(".ctors"),
-        RelSectionDef(".dtors"),
+        RelSectionDef(".ctors", balign=0),
+        RelSectionDef(".dtors", balign=0),
         RelSectionDef(".rodata"),
         RelSectionDef(".data")
     ],

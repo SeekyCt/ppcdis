@@ -24,8 +24,8 @@ default_section_defs = [
     [ # Data
         DolSectionDef("extab_", "a"),
         DolSectionDef("extabindex_", "a"),
-        DolSectionDef(".ctors"),
-        DolSectionDef(".dtors"),
+        DolSectionDef(".ctors", balign=0),
+        DolSectionDef(".dtors", balign=0),
         DolSectionDef(".rodata"),
         DolSectionDef(".data"),
         DolSectionDef(".sdata"),
