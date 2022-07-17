@@ -136,6 +136,11 @@ into
 lbl_80100000:
     .4byte 0x00000000
 ```
+
+#### forced_types
+
+When analysis gets the type of a symbol wrong, this can be used to override it. The available types are `FUNCTION`, `LABEL` and `DATA`.
+
 ## Disassembler
 
 The disassembler outputs assembly code in various forms, as well as C jumptable workarounds.

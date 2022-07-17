@@ -34,6 +34,7 @@ class AnalysisOverrideManager(OverrideManager):
         self._bt = set(yml.get("blocked_targets", []))
         self._btr = self._make_ranges(yml.get("blocked_target_ranges", []))
         self._sd2s = self._make_size_ranges(yml.get("sdata_sizes", []))
+        self._ft = yml.get("forced_types", {})
 
     def is_blocked_pointer(self, addr: int) -> bool:
         """Checks if the potential pointer at an address is a known false positive"""
@@ -62,6 +63,11 @@ class AnalysisOverrideManager(OverrideManager):
             return None
         else:
             assert 0, f"Overlapping sdata sizes for {addr:x}"
+
+    def get_forced_types(self) -> List[Tuple[int, str]]:
+        """Gets the forced types for addresses"""
+
+        return list(self._ft.items())
         
 class LabelType(Enum):
     """Types of label for an address"""
@@ -90,9 +96,11 @@ class LabelType(Enum):
 class Labeller:
     """Class to handle label creation and lookup"""
 
-    def __init__(self, binary: BinaryReader, extra_label_paths=None):
-        # Backup binary reference
+    def __init__(self, binary: BinaryReader, overrides: AnalysisOverrideManager,
+                 extra_label_paths=None):
+        # Backup references
         self._bin = binary
+        self._ovr = overrides
 
         # _d maps an address to its label type
         self._d = {}
@@ -159,6 +167,9 @@ class Labeller:
                 t = "DATA"
             else:
                 t = "JUMPTABLE"
+            labels[addr] = t
+        
+        for addr, t in self._ovr.get_forced_types():
             labels[addr] = t
 
         dump_to_pickle(path, labels)
@@ -305,9 +316,9 @@ class Analyser:
         self._thorough = thorough
         self.quiet = quiet
 
-        self._lab = Labeller(binary, extra_label_paths)
-        self._rlc = Relocator()
         self._ovr = AnalysisOverrideManager(overrides_path)
+        self._lab = Labeller(binary, self._ovr, extra_label_paths)
+        self._rlc = Relocator()
         self._follow = defaultdict(list) # per section queues of instructions to follow the values
                                          # from (either upper references or r13/r2 overrides)
         self._disasm = {} # maps addresses to their capstone instructions
