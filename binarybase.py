@@ -77,6 +77,8 @@ class BinarySection:
 
         if self.balign is None:
             return "\n.balign 8\n" if self.type != SectionType.TEXT else ""
+        elif self.balign == 0:
+            return ""
         else:
             return f"\n.balign {self.balign}\n"
 
