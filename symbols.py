@@ -58,8 +58,9 @@ class SymbolGetter:
                 self._sym[addr] = Symbol(name, True)
                 self._f.append(addr)
             elif t == "LABEL":
-                name = symbols.get(addr, f"lbl_{addr:x}")
-                self._sym[addr] = Symbol(name, False)
+                # Labels shouldn't be named, suggests analysis missed function
+                assert addr not in symbols, f"Tried to name label {addr:x} ({symbols[addr]})"
+                self._sym[addr] = Symbol(f"lbl_{addr:x}", False)
             elif t == "DATA":
                 name = symbols.get(addr, f"lbl_{addr:x}")
                 self._sym[addr] = Symbol(name, True)
