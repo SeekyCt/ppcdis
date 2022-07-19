@@ -69,29 +69,39 @@ class AnalysisOverrideManager(OverrideManager):
 
         return list(self._ft.items())
         
-class LabelType(Enum):
-    """Types of label for an address"""
+class LabelTag(Enum):
+    """Properties of a label at an address"""
 
-    # Function-local label
-    LABEL = 0
-
-    # Either a label or a tail-called function
-    # Demoted to a label automatically if not disproved
-    MAYBE_LABEL = 1
-
+    # Target of a bl, a b out of the binary, or a pointer from asm targetting a text section
     # Definite function
-    FUNCTION = 2
+    CALL = 0
 
-    # Either a label or a data pointed-to function
-    # Promoted to function automatically if not disproved
-    MAYBE_FUNCTION = 3
+    # Target of a b
+    # Label or tail called function (defaults to label)
+    UNCONDITIONAL = 1
 
-    # Data
-    # May be promoted to a jumptable
-    DATA = 4
-    
+    # Target of a conditional branch
+    # Label or rarely a function with a loop (defaults to label)
+    CONDITIONAL = 2
+
+    # Target of a pointer from data
+    # In text:
+    #   Function or jumptable label (defaults to function)
+    # In data:
+    #   Data or jumptable (defaults to data)
+    PTR = 3
+
+    # Target of a jumptable
+    # Definite label
+    JUMP = 4
+
+    # Jumptable
     # Definite jumptable
     JUMPTABLE = 5
+
+    # In a data section
+    # Data or jumptable (defaults to jumptable)
+    DATA = 6
 
 class Labeller:
     """Class to handle label creation and lookup"""
@@ -102,8 +112,8 @@ class Labeller:
         self._bin = binary
         self._ovr = overrides
 
-        # _d maps an address to its label type
-        self._d = {}
+        # Label addresses and their tags
+        self._tags = defaultdict(set)
 
         # Ordered list of functions for quick lookup
         self._f = []
@@ -111,67 +121,93 @@ class Labeller:
         # Load any known labels
         if extra_label_paths is not None:
             for path in extra_label_paths:
-                labels = load_from_pickle(path)
-                for addr in labels:
+                for addr, t in load_from_pickle(path).items():
                     if binary.addr_is_local(addr):
-                        self._d[addr] = LabelType[labels[addr]]
+                        if t == "FUNCTION":
+                            self._tags[addr].add(LabelTag.CALL)
+                        elif t == "DATA":
+                            self._tags[addr].add(LabelTag.DATA)
+                        else:
+                            assert 0, f"Unexpected external label type {t} at {addr:x}"
 
-    def is_uncertain_type(self, addr):
-        """Checks if a label could be promoted to a function / demoted to a label"""
+    def notify_tag(self, addr: int, tag: LabelTag):
+        """Registers a label tag for an address"""
 
-        return self._d[addr] in (LabelType.MAYBE_LABEL, LabelType.MAYBE_FUNCTION)
-
-    def notify_label(self, addr: int, t: LabelType):
-        """Creates a label at an address if there isn't already one"""
-
-        if not addr in self._d:
-            # Register new label
-            self._d[addr] = t
-        elif t in (LabelType.MAYBE_FUNCTION, LabelType.FUNCTION) and self.is_uncertain_type(addr):
-            # Function promotion / partial promotion
-            self._d[addr] = t
-        elif t == LabelType.LABEL and self.is_uncertain_type(addr):
-            # Function demotion
-            self._d[addr] = t
-        elif t == LabelType.JUMPTABLE:
-            # Jumptable promotion
-            self._d[addr] = t
+        # Get tag set
+        tags = self._tags[addr]
 
         # Add to sorted functions list if needed
-        if t == LabelType.FUNCTION:
+        if tag == LabelTag.CALL and LabelTag.CALL not in tags:
             idx = bisect(self._f, addr)
             self._f.insert(idx, addr)
-    
-    def check_label_type(self, addr: int) -> LabelType:
-        """Gets the type of the label at an address (None if there isn't one)"""
 
-        return self._d.get(addr)
-    
+        # Register tag
+        tags.add(tag)
+
+    def check_tagged(self, addr: int) -> bool:
+        """Checks if any label tags have been added to an address"""
+
+        return addr in self._tags
+
     def get_containing_function(self, instr_addr: int) -> Tuple[int, int]:
         """Returns the start and end addresses of the function containing an address"""
 
         sec = self._bin.find_section_containing(instr_addr)
         return get_containing_function(self._f, instr_addr, sec)
 
-    def output(self, path):
-        """Outputs all labelled addresses and their types to json
-        Automatically demotes MAYBE_LABELs and promotes MAYBE_FUNCTIONs"""
+    def _eval_tags(self, addr: int, tags: Set[LabelTag]
+                  ) -> str:
+        """Decides the type of a label from its tags"""
 
-        labels = {}
-        for addr, t in self._d.items():
-            if t in (LabelType.FUNCTION, LabelType.MAYBE_FUNCTION):
-                t = "FUNCTION"
-            elif t in (LabelType.LABEL, LabelType.MAYBE_LABEL):
-                t = "LABEL"
-            elif t == LabelType.DATA:
-                t = "DATA"
-            else:
-                t = "JUMPTABLE"
-            labels[addr] = t
+        # CALL will always be a function
+        if LabelTag.CALL in tags:
+            return "FUNCTION"
         
+        # If not given CALL (jumptables can point to the start of a loop, which can be the start of
+        # a function), JUMP implies label
+        if LabelTag.JUMP in tags:
+            return "LABEL"
+        
+        # JUMPTABLE will always be a jumptable
+        if LabelTag.JUMPTABLE in tags:
+            return "JUMPTABLE"
+
+        # If not given JUMPTABLE, DATA implies data
+        if LabelTag.DATA in tags:
+            return "DATA"
+
+        # Get containing section
+        sec = self._bin.find_section_containing(addr)
+
+        # PTR depends on section type
+        if LabelTag.PTR in tags:
+            if sec.type == SectionType.TEXT:
+                # If not given JUMP, PTR implies function
+                return "FUNCTION"
+            else:
+                # If not given JUMPTABLE, PTR implies data
+                return "DATA"
+        
+        # If not given CALL or PTR, UNCONDITIONAL and CONDTIONAL imply label
+        if LabelTag.UNCONDITIONAL in tags or LabelTag.CONDITIONAL in tags:
+            return "LABEL"        
+
+        assert 0, f"No known tags {addr:x} {tags}"
+
+    def output(self, path: str):
+        """Outputs all labelled addresses and their types to json"""
+
+        # Get types from tags
+        labels = {
+            addr : self._eval_tags(addr, tags)
+            for addr, tags in self._tags.items()
+        }
+        
+        # Apply overrides
         for addr, t in self._ovr.get_forced_types():
             labels[addr] = t
 
+        # Output
         dump_to_pickle(path, labels)
 
 class RelocType(IntEnum):
@@ -326,9 +362,9 @@ class Analyser:
         self._jt = {} # queue for after second pass, maps bctr addresses to their context backups
         self._sda = {} # queue for after second pass, maps r2/r13 use addresses to their targets
 
-        # Create labels for entry points
+        # Tag entry points as bl targets
         for addr, _ in self._bin.get_entries():
-            self._lab.notify_label(addr, LabelType.FUNCTION)
+            self._lab.notify_tag(addr, LabelTag.CALL)
 
         # Analyse
         self._first_pass()
@@ -339,16 +375,6 @@ class Analyser:
 
         if not self.quiet:
             print(msg)
-
-    def guess_label_type(self, addr: int, confident=True) -> LabelType:
-        """Predicts the type of a symbol by its section"""
-
-        sec = self._bin.find_section_containing(addr)
-
-        if sec.type == SectionType.TEXT:
-            return LabelType.FUNCTION if confident else LabelType.MAYBE_FUNCTION
-        else:
-            return LabelType.DATA
 
     def output(self, labels_path: str, relocs_path: str):
         """Saves analysis to files"""
@@ -372,23 +398,24 @@ class Analyser:
         if instr.id == PPC_INS_BL or not self._bin.addr_is_local(dest):
             # A bl will always be to a function
             # A branch out of this binary will also always be to a function
-            labType = LabelType.FUNCTION
+            tag = LabelTag.CALL
         elif instr.id == PPC_INS_B:
             # An unconditional branch may be to a label, or a function tail call
             # If this is later bl'd to or pointed to, it'll be promoted to a function
             # Else, it's automatically demoted to a label
-            labType = LabelType.MAYBE_LABEL
+            tag = LabelTag.UNCONDITIONAL
 
             # Queue to check against known function boundaries later
             sec_name = self._bin.find_section_containing(instr.address).name
             self._branches[sec_name].append(instr.address)
         else:
-            # Conditional branches are always to labels
-            labType = LabelType.LABEL
+            # Conditional branches are to labels, which can also be the start of a function
+            # if the whole function is a loop
+            tag = LabelTag.CONDITIONAL
 
         # Create label
         # Branch targets should never be fake, so overrides aren't checked here
-        self._lab.notify_label(dest, labType)
+        self._lab.notify_tag(dest, tag)
 
     def _process_upper(self, instr: CsInsn):
         """Queues potential @h/@ha operands in the first pass"""
@@ -461,8 +488,7 @@ class Analyser:
         # Treat as pointer if it's to a valid address
         if self._bin.validate_addr(val) and not self._ovr.is_blocked(addr, val):
             # Create label if it doesn't exist
-            labType = self.guess_label_type(val, False)
-            self._lab.notify_label(val, labType)
+            self._lab.notify_tag(val, LabelTag.PTR)
 
             # Create reloc
             self._rlc.notify_reloc(addr, RelocType.NORMAL, val)
@@ -482,10 +508,6 @@ class Analyser:
                 text_size = rci - sec.addr
             else:
                 text_size = sec.size
-            
-            # Create a function at the start of all text sections
-            # TODO: is this actually useful?
-            self._lab.notify_label(sec.addr, LabelType.FUNCTION)
             
             # Disassemble
             lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size), self.quiet)
@@ -526,7 +548,7 @@ class Analyser:
 
             # Check if jump destination is valid and no other label splits the table here
             if (jump < func_start or jump >= func_end or
-               (offs > 0 and self._lab.check_label_type(jt_addr + offs) is not None)):
+               (offs > 0 and self._lab.check_tagged(jt_addr + offs))):
                 break
             
             # Record dest
@@ -644,8 +666,11 @@ class Analyser:
                     del uppers[reg]
                 else:
                     # Create label if it doesn't exist
-                    labType = self.guess_label_type(sym_addr)
-                    self._lab.notify_label(sym_addr, labType)
+                    if self._bin.find_section_containing(sym_addr).type == SectionType.TEXT:
+                        tag = LabelTag.CALL
+                    else:
+                        tag = LabelTag.DATA
+                    self._lab.notify_tag(sym_addr, tag)
 
                     # Update upper half
                     upper.notify_lower(addr, offs, algebraic)
@@ -823,7 +848,7 @@ class Analyser:
         
         # Make destination a function if exiting function boundaries
         if dest < start or dest >= end:
-            self._lab.notify_label(dest, LabelType.FUNCTION)
+            self._lab.notify_tag(dest, LabelTag.CALL)
 
     def _postprocess_section_follows(self, section: BinarySection):
         """Follows all queued instructions in a section"""
@@ -863,7 +888,7 @@ class Analyser:
                     # Skip duplicates
                     if dest not in visited_dests:
                         # Demote dest to label
-                        self._lab.notify_label(dest, LabelType.LABEL)
+                        self._lab.notify_tag(dest, LabelTag.JUMP)
 
                         # Follow uppers through jump
                         jumptables_copy = (jumptables[0].copy(), jumptables[1].copy(), None)
@@ -886,7 +911,7 @@ class Analyser:
 
                 # Record jumptable
                 self._rlc.notify_jump_table(jt, offs)
-                self._lab.notify_label(jt, LabelType.JUMPTABLE)
+                self._lab.notify_tag(jt, LabelTag.JUMPTABLE)
 
             del self._jt[jt]
 
@@ -903,7 +928,7 @@ class Analyser:
                 offs = 0
 
             # Create label if it doesn't exist
-            self._lab.notify_label(target, LabelType.DATA)
+            self._lab.notify_tag(target, LabelTag.DATA)
 
             # Create reloc
             self._rlc.notify_reloc(addr, RelocType.SDA, target, offs)
