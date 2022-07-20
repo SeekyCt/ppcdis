@@ -108,25 +108,39 @@ class DisasmLine:
         """Gets the disassembly text for a line"""
 
         # Add .global and symbol name if required
-        prefix = ""
+        prefix = []
         name = sym.get_name(self.instr.address, hashable, True)
         if name is not None:
             if sym.is_global(self.instr.address):
                 # Don't include function label in inline asm
                 if not inline:
-                    prefix = f"\n.global {name}\n{name}:\n"
+                    prefix.append(f"\n.global {name}\n{name}:")
             else:
-                prefix = f"{name}:\n"
-        if sym.check_jt_label(self.instr.address):
-            prefix = ('//' if inline else '#') + " jumptable target\n" + prefix
+                prefix.append(f"{name}:")
         
+        # Add jumptable label if required
+        # .global affects branch hints, so a new label is created for this
+        # TODO: generate symbol names for this in hashable?
+        if not hashable and sym.check_jt_label(self.instr.address):
+            jump = f"jump_{self.instr.address:x}"
+            if inline:
+                prefix.append(f"entry {jump}")
+            else:
+                prefix.append(f".global {jump}")
+                prefix.append(f"{jump}:")
+
+        if len(prefix) > 0:
+            prefix.append('')
+        prefix = '\n'.join(prefix)
+
+        # Add address & bytes if required        
         if not hashable:
             comment = f"/* {self.instr.address:X} {self.instr.bytes.hex().upper()} */ "
         else:
             comment = ""
 
         # Add main data
-        return (f"{prefix}{comment}{self.mnemonic:<12}{self.operands}")
+        return f"{prefix}{comment}{self.mnemonic:<12}{self.operands}"
         
 class Disassembler:
     def __init__(self, binary: BinaryReader, symbols_path: str, source_name:str, labels_path: str,
@@ -306,9 +320,7 @@ class Disassembler:
         if enable_ref:
             if self._rlc.check_jt_at(addr):
                 target = int.from_bytes(val, 'big')
-                func, _ = self._sym.get_containing_function(target)
-                sym = self._sym.get_name(func)
-                ops = f"{sym}+0x{target - func:x}"
+                ops = f"jump_{target:x}"
             else:
                 ref = self._rlc.get_reference_at(addr)
                 if ref is not None:
@@ -418,7 +430,7 @@ class Disassembler:
                     
                     # Get targets
                     targets = [
-                        self._sym.get_name(self._bin.read_word(i))
+                        f"jump_{self._bin.read_word(i):x}"
                         for i in range(jt, jt + size, 4)
                     ]
 
@@ -439,29 +451,30 @@ class Disassembler:
 
         self.print(f"Disassemble jumptable {addr:x}")
 
-        # Get function
-        first_dest = self._bin.read_word(addr)
-        func, _ = self._sym.get_containing_function(first_dest)
-        sym = self._sym.get_name(func)
-
         # Get jumptable size and name
         size = self._rlc.get_jumptable_size(addr)
         jt_sym = self._sym.get_name(addr)
          
-        # Get offsets
-        offsets = [
-            self._bin.read_word(i) - func
+        # Get targets
+        targets = [
+            self._bin.read_word(i)
             for i in range(addr, addr + size, 4)
         ]
 
+        # Declare labels
+        decl = '\n'.join(
+            f"void jump_{target:x}();"
+            for target in targets
+        )
+
         # For some reason, CW will align pointer arrays to 8 bytes if they have an even length,
         # but doesn't do this for jumptables
-        if addr & 7 and len(offsets) % 2 == 0:
-            final = offsets.pop(-1)
-            extra_addr = addr + len(offsets) * 4
+        if addr & 7 and len(targets) % 2 == 0:
+            final = targets.pop(-1)
+            extra_addr = addr + len(targets) * 4
             name = f"jthack_{extra_addr:x}"
             extra = '\n'.join((
-                f"__declspec(section \".data\") char * {name} = (char *){sym} + {final};",
+                f"__declspec(section \".data\") void (*{name})() = jump_{final:x};",
                 "#pragma push",
                 "#pragma force_active on",
                 f"DUMMY_POINTER({name})",
@@ -471,10 +484,11 @@ class Disassembler:
             extra = ""
 
         return '\n'.join((
-            f"char * {jt_sym}[] = {{",
+            decl,
+            f"void (*{jt_sym}[])() = {{",
             '\n'.join(
-                f"    (char *){sym} + {offs},"
-                for offs in offsets
+                f"    jump_{target:x},"
+                for target in targets
             ),
             "};",
             extra
