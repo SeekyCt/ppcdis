@@ -5,7 +5,7 @@ Class to read data from a binary
 from abc import ABC, abstractmethod
 from bisect import bisect
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, unique
 from hashlib import sha1
 import os
 from struct import unpack
@@ -14,6 +14,7 @@ from typing import List, Tuple
 # Dummy offset used to indicate a read from a bss section
 OFFS_BSS = -1
 
+@unique
 class SectionType(Enum):
     """Types of section"""
 

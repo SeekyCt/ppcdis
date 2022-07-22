@@ -3,12 +3,13 @@ Binary reader for REL files
 """
 
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import IntEnum, unique
 from typing import Dict, List, Tuple
 
 from binarybase import BinaryReader, BinarySection, SectionType
 from binarydol import DolReader
 
+@unique
 class RelOffs(IntEnum):
     """Offsets of fields in the rel header"""
 
@@ -42,6 +43,7 @@ class RelSize(IntEnum):
     IMP_ENTRY = 8
     RELOC_ENTRY = 8
 
+@unique
 class RelType(IntEnum):
     """Types of RelReloc"""
 

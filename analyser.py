@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from bisect import bisect
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, unique
 from typing import Dict, List, Set, Tuple
 
 from capstone import CsInsn
@@ -69,6 +69,7 @@ class AnalysisOverrideManager(OverrideManager):
 
         return list(self._ft.items())
         
+@unique
 class LabelTag(Enum):
     """Properties of a label at an address"""
 
@@ -210,6 +211,7 @@ class Labeller:
         # Output
         dump_to_pickle(path, labels)
 
+@unique
 class RelocType(IntEnum):
     """Types of action a relocation can perform"""
 
