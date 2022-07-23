@@ -120,8 +120,8 @@ class RelReader(BinaryReader):
             self._section_defs = default_section_defs
 
         # Keep an internal map of the sections including the empty ones (for reloc indices)
-        self._rel_sections = []
-        
+        self._rel_sections: List[RelBinarySection] = []
+
         # Call parent constructor
         super().__init__(path)
 
@@ -129,14 +129,17 @@ class RelReader(BinaryReader):
         self._read_relocs()
 
         # Read module id
-        self._module_id = self.read_word(RelOffs.MODULE_ID, True)
+        self.module_id = self.read_word(RelOffs.MODULE_ID, True)
 
+        # Save external rels by id
+        self._rels: Dict[int, RelReader] = {self.module_id : self}
+        
     def _read_relocs(self):
         """Reads the relocation data into _relocs"""
 
         # Init dict and list
-        self._relocs = {} # Internal map by target address
-        self.relocs = [] # Public list in original order
+        self._relocs: Dict[int, RelReloc] = {} # Internal map by target address
+        self.relocs: List[RelReloc] = [] # Public list in original order
 
         # Iterate over all imps
         imp_offs = self.read_word(RelOffs.IMP_OFFSET, True)
@@ -201,17 +204,9 @@ class RelReader(BinaryReader):
             # Apply relocation if found
             if addr + i in self._relocs:
                 # Get reloc
-                rel: RelReloc = self._relocs[addr + i]
+                rel = self._relocs[addr + i]
 
-                # Calculate target
-                if rel.target_module == 0:
-                    # Dol - absolute address
-                    target = rel.addend
-                else:
-                    # Rel - offset into section
-                    assert rel.target_module == self._module_id, \
-                           f"Relocations against other rels not supported"
-                    target = self._rel_sections[rel.section].addr + rel.addend
+                target = self.get_reloc_target(rel)
 
                 if rel.t == RelType.ADDR32:
                     # Replace with address
@@ -357,3 +352,23 @@ class RelReader(BinaryReader):
         """Loads another binary of the same type with the same settings"""
 
         return RelReader(self._dol, path, self._base_addr, self._bss_addr, self._section_defs_raw)
+    
+    def get_reloc_target(self, reloc: RelReloc) -> int:
+        """Calculates the target address of a relocation"""
+
+        # Calculate target
+        if reloc.target_module == 0:
+            # Dol - absolute address
+            return reloc.addend
+        else:
+            # Rel - offset into section
+            rel = self._rels.get(reloc.target_module)
+            assert rel is not None, f"Relocation against unknown rel {reloc.target_module}"
+            return rel._rel_sections[reloc.section].addr + reloc.addend
+
+    def register_external_rel(self, rel: "RelReader"):
+        """Adds an external rel file to link against"""
+
+        assert rel.module_id not in self._rels, f"Duplicate module id {rel.module_id}"
+        self._rels[rel.module_id] = rel
+        self._externs.append(rel)

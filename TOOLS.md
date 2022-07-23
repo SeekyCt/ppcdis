@@ -42,9 +42,17 @@ section_defs:
 The properties of a section are:
     - `attr` (optional) attributes given to the section in disassembly
 
+## relextern
+
+Pre-scans rel binaries for any labels they reference in other binaries to be passed into analysis as extra labels.
+
 ## Analyser
 
 The analyser analyses the code in a binary to identify things like relocations, functions, labels and jumptables. This is required for the disassembler.
+
+### Extra labels
+
+The `--extra-labels` flag allows for labels in this binary referenced by external binaries to be given, allowing them to be output even if they're never referenced by this binary. These can be generated with the relextern tool.
 
 ### Thorough value following
 
