@@ -138,21 +138,24 @@ class BinaryReader(ABC):
         # Search external binaries if enabled
         if not local_only:
             for ext in self._externs:
-                ret = ext.find_section_containing(addr)
+                ret = ext.find_section_containing(addr, True)
                 if ret is not None:
                     return ret
         
         # Not found
         return None
 
-    def validate_addr(self, addr: int) -> int:
+    def validate_addr(self, addr: int, local_only=False) -> int:
         """Checks if an address is a meaningful place to be pointed to"""
 
         # Check if local
         sec = self.find_section_containing(addr, True)
         if sec is None:
-            # Check if in any extern
-            return any(ext.validate_addr(addr) for ext in self._externs)
+            # Check if in any extern if allowed
+            if not local_only:
+                return any(ext.validate_addr(addr, True) for ext in self._externs)
+            else:
+                return False
         elif sec.type == SectionType.TEXT:
             # Text addresses will be 4-byte aligned
             # TODO: LECT code might not follow this
