@@ -4,6 +4,7 @@ Binary reader for REL files
 
 from dataclasses import dataclass
 from enum import IntEnum, unique
+from struct import pack
 from typing import Dict, List, Tuple
 
 from binarybase import BinaryReader, BinarySection, SectionType
@@ -65,6 +66,16 @@ class RelReloc:
     section: int
     addend: int
     write_addr: int = None
+
+    def to_binary(self, relative_offset: int) -> bytearray:
+        """Gets the binary representation of the relocation"""
+
+        return RelReloc.quick_binary(relative_offset, self.t, self.section, self.addend)
+
+    def quick_binary(relative_offset: int, t: int, section: int, addend: int) -> bytearray:
+        """Gets the binary representation of a relocation"""
+
+        return bytearray(pack(">HBBI", relative_offset, t, section, addend))
 
 class RelBinarySection(BinarySection):
     """Custom BinarySection that tracks its index in the rel header"""
