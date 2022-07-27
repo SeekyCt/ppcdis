@@ -242,8 +242,11 @@ class BinaryReader(ABC):
     def section_sha(self, section: BinarySection) -> bytes:
         """Hashes a section in this binary"""
         
-        dat = self.read(section.offset, section.size, True)
-        return sha1(dat).digest()
+        if section.type == SectionType.BSS:
+            return section.size
+        else:
+            dat = self.read(section.offset, section.size, True)
+            return sha1(dat).digest()
 
     @abstractmethod
     def load_other(self, path: str) -> "BinaryReader":
