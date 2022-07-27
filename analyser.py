@@ -786,6 +786,18 @@ class Analyser:
                         if addr in queue:
                             # tprint(f"Removed from queue at {addr:x}")
                             queue.remove(addr)
+            
+            # Track moved upper references
+            # Very rarely, newer CW versions will do weird stuff like
+            # lis r0, 0x8095
+            # mr r3, r0
+            # addi r3, r3, 0x4630
+            # TODO: do jumptables need support here?
+            if instr.id == PPC_INS_MR:
+                dest = instr.operands[0].reg
+                src = instr.operands[1].reg
+                if src in uppers:
+                    uppers[dest] = uppers[src]
 
             # Value not preserved after function call
             if instr.id in (PPC_INS_BL, PPC_INS_BCTRL, PPC_INS_BLRL):
