@@ -30,12 +30,24 @@ class DisassemblyOverrideManager(OverrideManager):
 
         # Load categories
         self._mfr = self._make_ranges(yml.get("manual_sdata2_ranges", []))
+        self._tc = yml.get("trim_ctors", False)
+        self._td = yml.get("trim_dtors", False)
 
     def is_manual_sdata2(self, addr: int):
         """Checks if the symbol at an address should be made relative to r2 for manual handling
         in inline assembly"""
 
         return self._check_range(self._mfr, addr)
+    
+    def should_trim_ctors(self):
+        """Checks if terminating zeros should be removed from .ctors disassembly"""
+
+        return self._tc
+
+    def should_trim_dtors(self):
+        """Checks if terminating zeros should be removed from .ctors disassembly"""
+
+        return self._td
 
 class RelocGetter:
     """Class to handle relocation lookup"""
@@ -346,6 +358,15 @@ class Disassembler:
         elif sec.type in (SectionType.DATA, SectionType.BSS):
             assert not inline, "Only text can be disassembled for inline assembly"
             assert not hashable, "Only text can be disassembled for hashing"
+
+            # Trim if required
+            if (
+                sec.name == ".ctors" and self._ovr.should_trim_ctors() or
+                sec.name == ".dtors" and self._ovr.should_trim_dtors()
+            ):
+                while self._bin.read_word(end - 4) == 0:
+                    end -= 4
+
             ret = []
             unaligned = self._sym.get_unaligned_in(start, end)
             unaligned.append(0xffff_ffff) # Hack so that [0] can always be read
