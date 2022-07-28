@@ -202,6 +202,10 @@ where 1.0 is at 80100000 and 80100000 is added to the blocked addresses would be
     lfs f1, lbl_80100000
 ```
 
+#### trim_ctors / trim_dtors
+
+The CW linker's behaviour with the .ctors and .dtors sections is quite weird. In some circumstances, the linker will automatically generate the zeros at the end of the .ctors and .dtors sections. These overrides allow for them to be removed from the disassembly to account for that.
+
 ### Symbol Map
 
 Takes a symbol yml of the format
@@ -246,6 +250,10 @@ The `--num-sections` flag can be used to add extra empty sections in the header.
 ### Symbol Definitions
 
 If the `REL_SYMBOL_AT` macro is used to get `relsymdef` symbols, then the `--base-rel`, `--base-rel-addr` and `--base-rel-bss` args must be provided to give the addresses context.
+
+## forcefilesgen
+
+Adds a list of files to the FORCEFILES section of an LCF file by replacing the string `PPCDIS_FORCEFILES`.
 
 ## orderfloats
 
