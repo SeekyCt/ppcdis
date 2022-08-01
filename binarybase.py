@@ -145,7 +145,7 @@ class BinaryReader(ABC):
         # Not found
         return None
 
-    def validate_addr(self, addr: int, local_only=False) -> int:
+    def validate_addr(self, addr: int, local_only=False) -> bool:
         """Checks if an address is a meaningful place to be pointed to"""
 
         # Check if local
@@ -164,7 +164,7 @@ class BinaryReader(ABC):
             # Valid data address
             return True
 
-    def addr_is_local(self, addr: int) -> int:
+    def addr_is_local(self, addr: int) -> bool:
         """Checks if an address belongs to this binary"""
 
         return self.find_section_containing(addr, True) is not None
