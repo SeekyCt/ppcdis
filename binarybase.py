@@ -163,6 +163,11 @@ class BinaryReader(ABC):
         else:
             # Valid data address
             return True
+    
+    def contains_addr(self, addr: int) -> bool:
+        """Checks if an address is contained by this binary"""
+
+        return self.find_section_containing(addr, True) is not None
 
     def addr_is_local(self, addr: int) -> bool:
         """Checks if an address belongs to this binary"""
