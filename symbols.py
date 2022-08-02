@@ -65,7 +65,8 @@ class SymbolGetter:
                 name = symbols.get(addr, f"lbl_{addr:x}")
                 self._sym[addr] = Symbol(name, True)
             elif t == "JUMPTABLE":
-                assert name not in symbols, f"Symbols rename jumptable {addr:x}"
+                # Jumptables shouldn't be named
+                assert name not in symbols, f"Tried to rename jumptable {addr:x} ({symbols[addr]})"
                 self._sym[addr] = Symbol(f"jtbl_{addr:x}", True)
             else:
                 assert 0, f"{addr} invalid"
