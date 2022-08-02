@@ -34,7 +34,7 @@ else:
     t = "f32"
 
 asm = "asm " if args.asm else ""
-sda = " - SDA2_BASE" if args.sda else ""
+sda = f" - 0x{binary.r2:x}" if args.sda else ""
 
 floats = [(func(addr), addr) for addr in range(args.start_addr, args.end_addr, size)]
 
