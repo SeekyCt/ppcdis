@@ -30,6 +30,7 @@ class DisassemblyOverrideManager(OverrideManager):
 
         # Load categories
         self._mfr = self._make_ranges(yml.get("manual_sdata2_ranges", []))
+        self._gmf = yml.get("global_manual_floats", False)
         self._tc = yml.get("trim_ctors", False)
         self._td = yml.get("trim_dtors", False)
 
@@ -37,7 +38,7 @@ class DisassemblyOverrideManager(OverrideManager):
         """Checks if the symbol at an address should be made relative to r2 for manual handling
         in inline assembly"""
 
-        return self._check_range(self._mfr, addr)
+        return self._gmf or self._check_range(self._mfr, addr)
     
     def should_trim_ctors(self):
         """Checks if terminating zeros should be removed from .ctors disassembly"""
