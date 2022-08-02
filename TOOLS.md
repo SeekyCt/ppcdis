@@ -202,6 +202,10 @@ where 1.0 is at 80100000 and 80100000 is added to the blocked addresses would be
     lfs f1, lbl_80100000
 ```
 
+#### global_manual_floats
+
+Signals that all inline assembly should reference constant floats / doubles by their label instead of their value. This is neccessary for versions of CW older than 4199 60831, and must be paired with an orderfloats not using the `--asm` flag.
+
 #### trim_ctors / trim_dtors
 
 The CW linker's behaviour with the .ctors and .dtors sections is quite weird. In some circumstances, the linker will automatically generate the zeros at the end of the .ctors and .dtors sections. These overrides allow for them to be removed from the disassembly to account for that.
@@ -231,6 +235,14 @@ The binary categories (the filename as passed in command line arguments without 
 
 The source file categories (source file path as passed in with `--source-name`) give symbols that apply to the source file.
 
+## assetrip
+
+Rips an embedded asset from a binary.
+
+## assetinc
+
+Generates a C include file with the contents of a binary file as a u8 array.
+
 ## binarydiff
 
 Prints any differing sections in a dol or rel file, and any differing relocations in a rel file. Takes a binary yml for the matching binary, and the path of the testing binary (properties from the yml are re-used for this too).
@@ -254,6 +266,10 @@ If the `REL_SYMBOL_AT` macro is used to get `relsymdef` symbols, then the `--bas
 ## forcefilesgen
 
 Adds a list of files to the FORCEFILES section of an LCF file by replacing the string `PPCDIS_FORCEFILES`.
+
+## forceactivegen
+
+Adds functions from an external labels pickle to the FORCEACTIVE section of an LCF file by replacing the string `PPCDIS_FORCEACTIVE`.
 
 ## orderfloats
 
