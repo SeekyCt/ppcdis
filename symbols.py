@@ -33,9 +33,9 @@ def name_filt(name: str) -> str:
         return name
 
 def is_mangled(name: str) -> bool:
-    """Checks if a symbol name has namespacing"""
+    """Checks if a symbol name is mangled"""
 
-    return re.match(r".+__[Q0-9]+.+", name) is not None
+    return re.match(r".+__.+", name) is not None
 
 class SymbolGetter:
     """Class to handle symbol creation and lookup"""
