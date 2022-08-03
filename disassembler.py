@@ -19,7 +19,7 @@ from instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, 
                        signExtendInsns, storeLoadInsns, renamedInsns)
 from overrides import OverrideManager
 from slices import Slice
-from symbols import SymbolGetter
+from symbols import SymbolGetter, has_bad_chars, is_mangled
 from fileutil import load_from_pickle
 
 class DisassemblyOverrideManager(OverrideManager):
@@ -190,7 +190,8 @@ class Disassembler:
         # Append to mnemonic
         line.mnemonic = instr.mnemonic + ('+' if likely else '-')
 
-    def _process_labelled_branch(self, instr: capstone.CsInsn, line: DisasmLine, hashable=False):
+    def _process_labelled_branch(self, instr: capstone.CsInsn, line: DisasmLine, inline=False,
+                                 hashable=False, mangled=None):
         """Replaces the destination of a branch with its symbol, and creates that if necessary"""
 
         # Preserve condition register usage if present
@@ -200,8 +201,23 @@ class Disassembler:
             cr = ''
         dest = instr.operands[-1].imm
         
+        # Get symbol name
+        name = self._sym.get_name(dest, hashable)
+
+        # Use hardcoded address if needed
+        # TODO: make shiftable somehow
+        if inline:
+            if has_bad_chars(name):
+                delta = dest - instr.address
+                sign = '+' if delta >= 0 else '-'
+                name = f"*{sign}0x{abs(delta):x}"
+        
+            # Add to mangled declaration list if needed
+            elif mangled is not None and is_mangled(name):
+                mangled.append(name)
+
         # Replace destination with label name
-        line.operands = cr + self._sym.get_name(dest, hashable)
+        line.operands = cr + name
     
     def _process_signed_immediate(self, instr: capstone.CsInsn, line: DisasmLine):
         """Sign extends the immediate when capstone misses it"""
@@ -211,7 +227,8 @@ class Disassembler:
         
         line.operands = others + ' ' + hex(signed)
     
-    def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine, hashable=False):
+    def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine, inline=False, hashable=False,
+                       mangled=None):
         """Replaces the immediate of a lis with a reference"""
 
         # Get reference info
@@ -221,9 +238,22 @@ class Disassembler:
         if ref is None:
             return
 
+        # Get symbol name
+        name = self._sym.get_name(ref.target, hashable)
+
+        if inline:
+            # Use hardcoded address if needed
+            # TODO: make shiftable somehow
+            if has_bad_chars(name):
+                name = hex(ref.target)
+            
+            # Add to mangled declaration list if needed
+            elif mangled is not None and is_mangled(name):
+                mangled.append(name)
+
         # Add reference to operands
         dest = instr.reg_name(instr.operands[0].reg)
-        sym = self._sym.get_name(ref.target, hashable) + ref.format_offs()
+        sym = name + ref.format_offs()
         if ref.t == RelocType.NORMAL:
             rel = "h"
         elif ref.t == RelocType.ALGEBRAIC:
@@ -233,7 +263,7 @@ class Disassembler:
         line.operands = f"{dest}, {sym}@{rel}"
     
     def _process_lower(self, instr: capstone.CsInsn, line: DisasmLine, inline=False,
-                       hashable=False):
+                       hashable=False, mangled=None):
         """Replaces the immediate of a lower instruction with a reference"""
 
         # Get reference info
@@ -252,7 +282,19 @@ class Disassembler:
         reg_name = instr.reg_name(reg)
 
         # Get symbol name
-        sym = self._sym.get_name(ref.target, hashable) + ref.format_offs()
+        name = self._sym.get_name(ref.target, hashable)
+
+        if inline:
+            # Use hardcoded address if needed
+            # TODO: make shiftable somehow
+            if has_bad_chars(name):
+                name = hex(ref.target)
+        
+            # Add to mangled declaration list if needed
+            elif mangled is not None and is_mangled(name):
+                mangled.append(name)
+
+        sym = name + ref.format_offs()
 
         # Different syntax for inline asm SDA
         if inline and ref.t == RelocType.SDA:
@@ -297,14 +339,14 @@ class Disassembler:
             else:
                 line.operands = f"{dest}, {reg_name}, {sym}{rel}"
 
-    def _process_instr(self, instr: capstone.CsInsn, inline=False, hashable=False) -> str:
+    def _process_instr(self, instr: capstone.CsInsn, inline=False, hashable=False, mangled=None) -> str:
         """Takes a capstone instruction and converts it to a DisasmLine"""
 
         if not isinstance(instr, DummyInstr):
             ret = DisasmLine(instr, instr.mnemonic, instr.op_str)
 
             if instr.id in labelledBranchInsns:
-                self._process_labelled_branch(instr, ret, hashable)
+                self._process_labelled_branch(instr, ret, inline, hashable, mangled)
 
             if instr.id in conditionalBranchInsns:
                 self._process_branch_hint(instr, ret)
@@ -313,10 +355,10 @@ class Disassembler:
                 self._process_signed_immediate(instr, ret)
 
             if instr.id in upperInsns:
-                self._process_upper(instr, ret, hashable)
+                self._process_upper(instr, ret, inline, hashable, mangled)
             
             if instr.id in lowerInsns or instr.id in storeLoadInsns:
-                self._process_lower(instr, ret, inline, hashable)
+                self._process_lower(instr, ret, inline, hashable, mangled)
             
             if instr.id in renamedInsns:
                 ret.mnemonic = renamedInsns[instr.id] + ' '
@@ -344,7 +386,15 @@ class Disassembler:
         return DisasmLine(instr, ".4byte", ops).to_txt(self._sym)
 
     def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
-                      hashable=False) -> str:
+                      hashable=False, mangled=None) -> str:
+        """Disassembles a range of assembly or data
+        
+        Inline changes the output to CW inline asm syntax (functions only)
+        Hashable replaces symbol names with incrementing numeric ids in order of reference
+        (functions only)
+        Mangled will track any mangled symbol names required to be defined if not None (for inline)
+        """
+
         if sec.type == SectionType.TEXT:
             # Disassemble
             lines = cs_disasm(start, self._bin.read(start, end - start), self.quiet)
@@ -352,7 +402,7 @@ class Disassembler:
             # Apply fixes and relocations
             nofralloc = "nofralloc\n" if inline else ""
             return nofralloc + '\n'.join([
-                self._process_instr(lines[addr], inline, hashable)
+                self._process_instr(lines[addr], inline, hashable, mangled)
                 for addr in lines
             ])
 
@@ -414,8 +464,15 @@ class Disassembler:
             self._disasm_range(section, section.addr, section.addr + section.size)
         )
     
-    def _function_to_text(self, addr: int, inline=False, extra=False, hashable=False) -> str:
-        """Outputs the disassembly of a single function to text"""
+    def _function_to_text(self, addr: int, inline=False, extra=False, hashable=False, mangled=None
+                         ) -> str:
+        """Outputs the disassembly of a single function to text
+        
+        Inline changes the output to CW inline asm syntax
+        Extra includes referenced jumptables
+        Hashable replaces symbol names with incrementing numeric ids in order of reference
+        Mangled will track any mangled symbol names required to be defined if not None (for inline)
+        """
 
         self.print(f"Disassemble function {addr:x}")
 
@@ -430,7 +487,7 @@ class Disassembler:
         sec = self._bin.find_section_containing(addr, True)
 
         # Disassemble and format
-        ret = [self._disasm_range(sec, start, end, inline, hashable).lstrip('\n')]
+        ret = [self._disasm_range(sec, start, end, inline, hashable, mangled).lstrip('\n')]
 
         # Add jumptables if wanted
         if extra:
@@ -580,7 +637,20 @@ class Disassembler:
         """Outputs a function's disassembly to a file"""
 
         with open(path, 'w') as f:
-            f.write(self._function_to_text(addr, inline, extra))
+            # Disassemble function
+            mangled = [] if inline else None
+            asm = self._function_to_text(addr, inline, extra, False, mangled)
+
+            # Namespaced objects can't be accessed in inline assembly, so their
+            # mangled names with extern "C" are used as a workaround
+            if inline:
+                declarations = [
+                    f"    UNKNOWN_FUNCTION({name});"
+                    for name in mangled
+                ]
+            else:
+                declarations = []
+            f.write('\n'.join(declarations + [asm]))
     
     def output_jumptable(self, path: str, addr: int):
         """Outputs a jumptable C workaround to a file"""

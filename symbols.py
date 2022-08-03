@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from bisect import bisect
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
+import re
 
 from binarybase import BinaryReader, BinarySection
 from binaryyml import load_binary_yml
@@ -20,13 +21,21 @@ class Symbol:
 # Symbols that require a symbol name to be quoted by the GCC assembler
 GCC_BAD_CHARS = {"@", '\\', '<', '>'} # TODO: more?
 
-def name_filt(name):
+def has_bad_chars(name: str) -> bool:
+    return any(c in name for c in GCC_BAD_CHARS)
+
+def name_filt(name: str) -> str:
     """Quotes a name if required"""
 
-    if any(c in name for c in GCC_BAD_CHARS):
+    if has_bad_chars(name):
         return '"' + name + '"'
     else:
         return name
+
+def is_mangled(name: str) -> bool:
+    """Checks if a symbol name has namespacing"""
+
+    return re.match(r".+__[Q0-9]+.+", name) is not None
 
 class SymbolGetter:
     """Class to handle symbol creation and lookup"""

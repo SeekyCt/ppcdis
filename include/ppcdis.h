@@ -8,6 +8,16 @@
 
 #define UNKNOWN_FUNCTION(name) void name(void)
 
+// Forward declares a function to allow it to be mangled, and adds extern "C"
+// to it to prevent any functions it references being mangled
+// Should be used for any C++ inline asm includes
+
+#ifdef __cplusplus
+    #define MANGLED_ASM(prototype) \
+        prototype; \
+        extern "C" asm prototype
+#endif
+
 // Data dummy helpers
 
 void __dummy_str(const char *);
