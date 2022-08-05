@@ -20,7 +20,7 @@ from fileutil import dump_to_pickle, load_from_pickle
 from instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,
                        algebraicReferencingInsns, returnBranchInsns)
 from overrides import OverrideManager
-from symbols import get_containing_function
+from symbols import LabelType, get_containing_function
 
 class AnalysisOverrideManager(OverrideManager):
     """Analysis category OverrideManager"""
@@ -124,9 +124,9 @@ class Labeller:
             for path in extra_label_paths:
                 for addr, t in load_from_pickle(path).items():
                     if binary.addr_is_local(addr):
-                        if t == "FUNCTION":
+                        if t == LabelType.FUNCTION:
                             self._tags[addr].add(LabelTag.CALL)
-                        elif t == "DATA":
+                        elif t == LabelType.DATA:
                             self._tags[addr].add(LabelTag.DATA)
                         else:
                             assert 0, f"Unexpected external label type {t} at {addr:x}"
@@ -162,20 +162,20 @@ class Labeller:
 
         # CALL will always be a function
         if LabelTag.CALL in tags:
-            return "FUNCTION"
+            return LabelType.FUNCTION
         
         # If not given CALL (jumptables can point to the start of a loop, which can be the start of
         # a function), JUMP implies label
         if LabelTag.JUMP in tags:
-            return "LABEL"
+            return LabelType.LABEL
         
         # JUMPTABLE will always be a jumptable
         if LabelTag.JUMPTABLE in tags:
-            return "JUMPTABLE"
+            return LabelType.JUMPTABLE
 
         # If not given JUMPTABLE, DATA implies data
         if LabelTag.DATA in tags:
-            return "DATA"
+            return LabelType.DATA
 
         # Get containing section
         sec = self._bin.find_section_containing(addr)
@@ -184,14 +184,14 @@ class Labeller:
         if LabelTag.PTR in tags:
             if sec.type == SectionType.TEXT:
                 # If not given JUMP, PTR implies function
-                return "FUNCTION"
+                return LabelType.FUNCTION
             else:
                 # If not given JUMPTABLE, PTR implies data
-                return "DATA"
+                return LabelType.DATA
         
         # If not given CALL or PTR, UNCONDITIONAL and CONDTIONAL imply label
         if LabelTag.UNCONDITIONAL in tags or LabelTag.CONDITIONAL in tags:
-            return "LABEL"        
+            return LabelType.LABEL        
 
         assert 0, f"No known tags {addr:x} {tags}"
 

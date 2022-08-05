@@ -12,6 +12,12 @@ from binarybase import BinaryReader, BinarySection
 from binaryyml import load_binary_yml
 from fileutil import dump_to_json_str, load_from_pickle, load_from_yaml
 
+class LabelType:
+    FUNCTION = "FUNCTION"
+    LABEL = "LABEL"
+    DATA = "DATA"
+    JUMPTABLE = "JUMPTABLE"
+
 @dataclass
 class Symbol:
     """Class store the name and scope of an address"""
@@ -62,23 +68,23 @@ class SymbolGetter:
         dat = load_from_pickle(labels_path)
         self._f = []
         for addr, t in dat.items():
-            if t == "FUNCTION":
+            if t == LabelType.FUNCTION:
                 name = symbols.get(addr, f"func_{addr:x}")
                 self._sym[addr] = Symbol(name, True)
                 self._f.append(addr)
-            elif t == "LABEL":
+            elif t == LabelType.LABEL:
                 # Labels shouldn't be named, suggests analysis missed function
                 assert addr not in symbols, f"Tried to name label {addr:x} ({symbols[addr]})"
                 self._sym[addr] = Symbol(f"lbl_{addr:x}", False)
-            elif t == "DATA":
+            elif t == LabelType.DATA:
                 name = symbols.get(addr, f"lbl_{addr:x}")
                 self._sym[addr] = Symbol(name, True)
-            elif t == "JUMPTABLE":
+            elif t == LabelType.JUMPTABLE:
                 # Jumptables shouldn't be named
                 assert name not in symbols, f"Tried to rename jumptable {addr:x} ({symbols[addr]})"
                 self._sym[addr] = Symbol(f"jtbl_{addr:x}", True)
             else:
-                assert 0, f"{addr} invalid"
+                assert 0, f"{addr:x} has invalid type {t}"
         self._f.sort()
 
         # Add entry points

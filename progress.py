@@ -8,6 +8,7 @@ import json
 from binaryyml import load_binary_yml
 from fileutil import load_from_pickle
 from slices import load_slice_yaml
+from symbols import LabelType
 
 parser = ArgumentParser()
 parser.add_argument("binary_path", type=str, help="Binary input yml path")
@@ -41,7 +42,7 @@ for source in sources:
 syms = sorted(
     [
         addr for addr, t in labels.items()
-        if t != "LABEL" and sec.contains_addr(addr)
+        if t != LabelType.LABEL and sec.contains_addr(addr)
     ] + [sec.addr + sec.size]
 )
 sizes = {

@@ -4,6 +4,7 @@ Rel external label preprocessor
 
 from argparse import ArgumentParser
 from typing import Dict
+from symbols import LabelType
 from binarybase import SectionType
 from binaryrel import RelReader, RelType
 
@@ -32,9 +33,9 @@ def get_rel_externs(dest: Dict[int, str], rel: RelReader):
             continue
         
         if rel.find_section_containing(target).type == SectionType.TEXT:
-            dest[target] = "FUNCTION"
+            dest[target] = LabelType.FUNCTION
         else:
-            dest[target] = "DATA"
+            dest[target] = LabelType.DATA
 
 if __name__=="__main__":
     parser = ArgumentParser(description="Analyse rel binaries for their external labels")
