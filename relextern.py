@@ -3,12 +3,12 @@ Rel external label preprocessor
 """
 
 from argparse import ArgumentParser
-import pickle
 from typing import Dict
 from binarybase import SectionType
 from binaryrel import RelReader, RelType
 
 from binaryyml import load_binary_yml
+from fileutil import dump_to_pickle
 
 def get_rel_externs(dest: Dict[int, str], rel: RelReader):
     for rlc in rel.relocs:
@@ -54,6 +54,5 @@ if __name__=="__main__":
         get_rel_externs(labels, rel)
     
     # Output
-    with open(args.output_path, 'wb') as f:
-        pickle.dump(labels, f)
+    dump_to_pickle(args.output_path, labels)
 
