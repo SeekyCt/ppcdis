@@ -162,12 +162,12 @@ class Disassembler:
         self._sym = SymbolGetter(symbols_path, source_name, labels_path, binary)
         self._rlc = RelocGetter(binary, self._sym, reloc_path)
         self._ovr = DisassemblyOverrideManager(overrides_path)
-        self.quiet = quiet
+        self._quiet = quiet
     
-    def print(self, msg: str):
+    def _print(self, msg: str):
         """Prints a message if not in quiet mode"""
 
-        if not self.quiet:
+        if not self._quiet:
             print(msg)
 
     def _process_branch_hint(self, instr: capstone.CsInsn, line: DisasmLine):
@@ -397,7 +397,7 @@ class Disassembler:
 
         if sec.type == SectionType.TEXT:
             # Disassemble
-            lines = cs_disasm(start, self._bin.read(start, end - start), self.quiet)
+            lines = cs_disasm(start, self._bin.read(start, end - start), self._quiet)
 
             # Apply fixes and relocations
             nofralloc = "nofralloc\n" if inline else ""
@@ -443,7 +443,7 @@ class Disassembler:
     def _slice_to_text(self, section: BinarySection, sl: Slice) -> str:
         """Outputs the disassembly of a slice to text"""
 
-        self.print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
+        self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
 
         assert section.addr <= sl.start < sl.end <= section.addr + section.size, \
                f"Invalid slice {sl} for section {section.name}"
@@ -457,7 +457,7 @@ class Disassembler:
     def _section_to_txt(self, section: BinarySection) -> str:
         """Outputs the disassembly of a single section to text"""
  
-        self.print(f"Disassemble section {section.name}")
+        self._print(f"Disassemble section {section.name}")
 
         return (
             section.get_start_text() +
@@ -474,7 +474,7 @@ class Disassembler:
         Mangled will track any mangled symbol names required to be defined if not None (for inline)
         """
 
-        self.print(f"Disassemble function {addr:x}")
+        self._print(f"Disassemble function {addr:x}")
 
         if hashable:
             self._sym.reset_hash_naming()
@@ -528,7 +528,7 @@ class Disassembler:
     def _jumptable_to_text(self, addr: int) -> str:
         """Outputs a jumptable C workaround to a text"""
 
-        self.print(f"Disassemble jumptable {addr:x}")
+        self._print(f"Disassemble jumptable {addr:x}")
 
         # Get jumptable size and name
         size = self._rlc.get_jumptable_size(addr)
@@ -576,7 +576,7 @@ class Disassembler:
     def _section_to_hashes(self, section: BinarySection, no_addrs=False) -> str:
         """Outputs the hashes of a single section to text"""
  
-        self.print(f"Hash section {section.name}")
+        self._print(f"Hash section {section.name}")
 
         if section.name == ".init":
             rci = self._bin.get_rom_copy_info()
@@ -603,6 +603,8 @@ class Disassembler:
     def _function_to_hash(self, addr: int) -> str:
         txt = self._function_to_text(addr, hashable=True)
         return sha1(txt.encode()).hexdigest()    
+
+    # TODO: separate file writing for API
 
     def output(self, path: str):
         """Outputs disassembly to a file"""
