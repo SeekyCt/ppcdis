@@ -677,15 +677,15 @@ if __name__=="__main__":
     parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("labels_path", type=str, help="Labels pickle input path")
     parser.add_argument("relocs_path", type=str, help="Relocs pickle input path")
-    parser.add_argument("output_path", type=str, help="Disassembly output path")
+    parser.add_argument("output_paths", type=str, nargs='+', help="Disassembly output path(s)")
     parser.add_argument("-m", "--symbol-map-path", type=str, help="Symbol map input path")
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
     parser.add_argument("-s", "--slice", type=hex_int, nargs=2,
                         help="Disassemble a slice (give start & end)")
     parser.add_argument("-j", "--jumptable", type=hex_int,
                         help="Generate a jumptable workaround (give start)")
-    parser.add_argument("-f", "--function", type=hex_int,
-                        help="Disassemble a single function (give start)")
+    parser.add_argument("-f", "--function", type=hex_int, nargs='+',
+                        help="Disassemble individual functions (give starts)")
     parser.add_argument("--hash", action="store_true", help="Output hashes of all functions")
     parser.add_argument("-i", "--inline", action="store_true",
                         help="For --function, disassemble as CW inline asm")
@@ -715,12 +715,19 @@ if __name__=="__main__":
     dis = Disassembler(binary, args.symbol_map_path, args.source_name, args.labels_path,
                        args.relocs_path, args.overrides, args.quiet)
     if args.slice is not None:
-        dis.output_slice(args.output_path, *args.slice)
+        assert len(args.output_paths) == 1, "--slice currently only takes 1 output"
+        dis.output_slice(args.output_paths[0], *args.slice)
     elif args.function is not None:
-        dis.output_function(args.output_path, args.function, args.inline, args.extra)
+        assert len(args.function) == len(args.output_paths), \
+            "Number of function addresses must equal number of output paths"
+        for path, addr in zip(args.output_paths, args.function):
+            dis.output_function(path, addr, args.inline, args.extra)
     elif args.jumptable is not None:
-        dis.output_jumptable(args.output_path, args.jumptable)
+        assert len(args.output_paths) == 1, "--jumptable currently only takes 1 output"
+        dis.output_jumptable(args.output_paths[0], args.jumptable)
     elif args.hash:
-        dis.output_hashes(args.output_path, args.no_addr)
+        assert len(args.output_paths) == 1, "--hash only takes 1 output"
+        dis.output_hashes(args.output_paths[0], args.no_addr)
     else:
-        dis.output(args.output_path)
+        assert len(args.output_paths) == 1, "Full disassembly only takes 1 output"
+        dis.output(args.output_paths[0])
