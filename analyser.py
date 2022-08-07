@@ -352,7 +352,7 @@ class Analyser:
                  extra_label_paths=None, thorough=False, quiet=False):
         self._bin = binary
         self._thorough = thorough
-        self.quiet = quiet
+        self._quiet = quiet
 
         self._ovr = AnalysisOverrideManager(overrides_path)
         self._lab = Labeller(binary, self._ovr, extra_label_paths)
@@ -372,18 +372,18 @@ class Analyser:
         self._first_pass()
         self._second_pass()
 
-    def print(self, msg: str):
+    def _print(self, msg: str):
         """Prints a message if not in quiet mode"""
 
-        if not self.quiet:
+        if not self._quiet:
             print(msg)
 
     def output(self, labels_path: str, relocs_path: str):
         """Saves analysis to files"""
     
-        self.print("Output labels")
+        self._print("Output labels")
         self._lab.output(labels_path)
-        self.print("Output relocations and jumptables")
+        self._print("Output relocations and jumptables")
         self._rlc.output(relocs_path)
 
     ##############
@@ -512,7 +512,7 @@ class Analyser:
                 text_size = sec.size
             
             # Disassemble
-            lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size), self.quiet)
+            lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size), self._quiet)
 
             # Analyse
             for addr in lines:
@@ -530,9 +530,9 @@ class Analyser:
     def _first_pass(self):
         """Completes the first analysis pass of all sections"""
 
-        self.print("== First Pass ==")
+        self._print("== First Pass ==")
         for sec in self._bin.sections:
-            self.print(f"Initial pass of {sec.name}")
+            self._print(f"Initial pass of {sec.name}")
             self._analyse_section(sec)
 
     ###############
@@ -870,7 +870,7 @@ class Analyser:
         if section.name not in self._follow:
             return
         
-        self.print(f"Postprocessing follows queued in {section.name}")
+        self._print(f"Postprocessing follows queued in {section.name}")
 
         queue = self._follow[section.name]
         while len(queue) > 0:
@@ -882,7 +882,7 @@ class Analyser:
     def _postprocess_jumptables(self):
         """Checks potential jumptables and follows all queued values through them"""
 
-        self.print(f"Postprocessing jumptables")
+        self._print(f"Postprocessing jumptables")
 
         while len(self._jt) > 0:
             jt = min(self._jt)
@@ -921,7 +921,7 @@ class Analyser:
 
                     offs += 4
                 
-                # self.print(f"Confirmed jumptable {jt:x}")
+                # self._print(f"Confirmed jumptable {jt:x}")
 
                 # Record jumptable
                 self._rlc.notify_jump_table(jt, offs)
@@ -950,7 +950,7 @@ class Analyser:
     def _postprocess_branches(self):
         """Checks for branches being tail calls"""
 
-        self.print("Postprocessing tail calls")
+        self._print("Postprocessing tail calls")
 
         # Now that function boundaries are more confident, check tail calls
         for sec_name in self._branches:
@@ -960,7 +960,7 @@ class Analyser:
     def _second_pass(self):
         """Completes the second analysis pass on all text sections"""
 
-        self.print("== Second Pass ==")
+        self._print("== Second Pass ==")
 
         # Follow upper references first
         for section in self._bin.sections:
