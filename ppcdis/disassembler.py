@@ -52,6 +52,9 @@ class RelocGetter:
     """Class to handle relocation lookup"""
 
     def __init__(self, binary: BinaryReader, sym: SymbolGetter, reloc_path: str):
+        # Backup binary reference
+        self._bin = binary
+
         # Load from file
         dat = load_from_pickle(reloc_path)
 
@@ -99,7 +102,7 @@ class RelocGetter:
         ret = []
         for addr in self._jt_sizes:
             # Get first target
-            target = binary.read_word(addr)
+            target = self._bin.read_word(addr)
 
             # Save if referencing this function
             if start <= target < end:

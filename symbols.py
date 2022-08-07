@@ -5,7 +5,7 @@ Helpers for address naming
 from argparse import ArgumentParser
 
 from ppcdis import load_binary_yml, lookup, reverse_lookup
-from ppcdis.fileutil import dump_to_json_str, load_from_yaml, 
+from ppcdis.fileutil import dump_to_json_str, load_from_yaml
 
 if __name__ == "__main__":
     parser = ArgumentParser()
