@@ -2,8 +2,8 @@
 Add forceactive entries to an LCF file from relextern output
 """
 
-from ppcdis.binarybase import BinaryReader
-from ppcdis.fileutil import load_from_pickle
+from .binarybase import BinaryReader
+from .fileutil import load_from_pickle
 
 from .symbols import SymbolGetter
 

@@ -4,8 +4,7 @@ Helpers for disassembly splitting
 
 from argparse import ArgumentParser
 
-from ppcdis import find_containing_source, load_binary_yml, load_slice_yaml, order_sources
-from ppcdis.fileutil import dump_to_json_str
+from ppcdis import dump_to_json_str, find_containing_source, load_binary_yml, load_slice_yaml, order_sources
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
