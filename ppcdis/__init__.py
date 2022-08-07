@@ -1,6 +1,7 @@
 from .analyser import Analyser
 from .disassembler import Disassembler
 from .assetinc import format_bytes
+from .assetrip import rip_asset
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydiff import diff_relocs, diff_secs
 from .binarydol import DolReader
@@ -9,6 +10,7 @@ from .binaryyml import load_binary_yml
 from .disassembler import Disassembler
 from .elf2dol import elf_to_dol
 from .elf2rel import RelLinker
+from .fileutil import dump_to_pickle, load_from_pickle, dump_to_yaml, load_from_yaml, dump_to_json_str
 from .forceactivegen import apply_forceactive
 from .forcefilesgen import apply_forcefiles
 from .orderfloats import order_floats

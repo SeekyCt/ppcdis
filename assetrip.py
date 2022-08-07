@@ -4,7 +4,7 @@ Rips an asset from a binary
 
 from argparse import ArgumentParser
 
-from .binaryyml import load_binary_yml
+from ppcdis import load_binary_yml, rip_asset
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     # Read asset
     binary = load_binary_yml(args.binary_path)
-    dat = binary.read(args.start_addr, args.end_addr - args.start_addr)
+    dat = rip_asset(binary, args.start_addr, args.end_addr)
 
     # Output
     with open(args.out_path, 'wb') as f:

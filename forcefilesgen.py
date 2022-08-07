@@ -3,10 +3,8 @@ Add forcefiles entries to an LCF file
 """
 
 from argparse import ArgumentParser
-from typing import List
 
-def apply_forcefiles(txt: str, files: List[str]) -> str:
-    return txt.replace("PPCDIS_FORCEFILES", '\n'.join(files))
+from ppcdis import apply_forcefiles
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)

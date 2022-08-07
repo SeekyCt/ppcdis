@@ -3,22 +3,8 @@ Add forceactive entries to an LCF file from relextern output
 """
 
 from argparse import ArgumentParser
-from typing import List
 
-from .binaryyml import load_binary_yml
-from .fileutil import load_from_pickle
-from .symbols import SymbolGetter
-
-def apply_forceactive(txt: str, externs: List[int]) -> str:
-    return txt.replace(
-        "PPCDIS_FORCEACTIVE",
-        '\n'.join(
-            sym.get_name(addr)
-
-            for addr in externs
-            if binary.contains_addr(addr)
-        )
-    )
+from ppcdis import apply_forceactive, load_binary_yml
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
@@ -35,11 +21,7 @@ if __name__ == "__main__":
         txt = f.read()
 
     binary = load_binary_yml(args.binary_path)
-    labels = load_from_pickle(args.labels_path)
-    externs = load_from_pickle(args.externs_path)
-    sym = SymbolGetter(args.symbols_path, None, args.labels_path, binary)
-
-    txt = apply_forceactive(txt, externs)
+    txt = apply_forceactive(binary, args.symbols_path, args.labels_path, args.externs_path, txt)
 
     with open(args.out_path, 'w') as f:
         f.write(txt)
