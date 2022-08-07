@@ -12,9 +12,6 @@ from capstone.ppc import *
 from instrcats import (blacklistedInsns, firstGprWriteInsns, firstLastGprWriteInsns, 
                        lastGprWriteInsns, manyGprWriteInsns)
 
-cs = Cs(CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
-cs.detail = True
-
 @dataclass
 class DummyInstr:
     """Dummy instruction class for data lines"""
@@ -64,6 +61,9 @@ def cs_should_ignore(instr: CsInsn) -> bool:
 
 def cs_disasm(addr: int, dat: bytes, quiet=False) -> OrderedDict[int, CsInsn]:
     """Disassembles code into an ordered dict of CsInsns"""
+
+    cs = Cs(CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
+    cs.detail = True
 
     if not quiet:
         print(f"Capstone: Dissassemble {addr:x}-{addr+len(dat):x}")
