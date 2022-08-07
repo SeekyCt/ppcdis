@@ -682,8 +682,8 @@ if __name__=="__main__":
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
     parser.add_argument("-s", "--slice", type=hex_int, nargs=2,
                         help="Disassemble a slice (give start & end)")
-    parser.add_argument("-j", "--jumptable", type=hex_int,
-                        help="Generate a jumptable workaround (give start)")
+    parser.add_argument("-j", "--jumptable", type=hex_int, nargs='+',
+                        help="Generate jumptable workarounds (give starts)")
     parser.add_argument("-f", "--function", type=hex_int, nargs='+',
                         help="Disassemble individual functions (give starts)")
     parser.add_argument("--hash", action="store_true", help="Output hashes of all functions")
@@ -723,8 +723,10 @@ if __name__=="__main__":
         for path, addr in zip(args.output_paths, args.function):
             dis.output_function(path, addr, args.inline, args.extra)
     elif args.jumptable is not None:
-        assert len(args.output_paths) == 1, "--jumptable currently only takes 1 output"
-        dis.output_jumptable(args.output_paths[0], args.jumptable)
+        assert len(args.jumptable) == len(args.output_paths), \
+            "Number of jumptable addresses must equal number of output paths"
+        for path, addr in zip(args.output_paths, args.jumptable):
+            dis.output_jumptable(path, addr)
     elif args.hash:
         assert len(args.output_paths) == 1, "--hash only takes 1 output"
         dis.output_hashes(args.output_paths[0], args.no_addr)
