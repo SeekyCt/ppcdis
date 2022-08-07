@@ -8,7 +8,7 @@ from .binarybase import BinaryReader
 from .binaryyml import load_binary_yml
 from .binaryrel import RelReader
 
-def make_txt(binary: BinaryReader, start_addr: int, end_addr: int, use_asm=False, use_sda=False,
+def order_floats(binary: BinaryReader, start_addr: int, end_addr: int, use_asm=False, use_sda=False,
              double=False):
     if double:
         func = binary.read_double
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     binary = load_binary_yml(args.binary_path)
 
-    txt = make_txt(binary, args.start_addr, args.end_addr, args.asm, args.sda, args.double)
+    txt = order_floats(binary, args.start_addr, args.end_addr, args.asm, args.sda, args.double)
 
     with open(args.out_path, 'w', encoding="shift-jis") as f:
         f.write(txt)

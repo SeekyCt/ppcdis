@@ -10,7 +10,7 @@ from .binaryrel import RelReader
 
 # TODO: non-pooled string support
 
-def make_txt(binary: BinaryReader, start_addr: int, end_addr: int, pool=False, enc="utf8"):
+def order_strings(binary: BinaryReader, start_addr: int, end_addr: int, pool=False, enc="utf8"):
     curStr = bytearray()
     strs = []
     addrs = [start_addr] if pool else []
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     binary = load_binary_yml(args.binary_path)
 
-    txt = make_txt(binary, args.start_addr, args.end_addr, args.pool, args.enc)
+    txt = order_strings(binary, args.start_addr, args.end_addr, args.pool, args.enc)
 
     with open(args.out_path, 'w', encoding=args.enc) as f:
         f.write(txt)
