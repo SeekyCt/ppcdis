@@ -33,10 +33,10 @@ class RelLinker:
         self._f = open(plf_path, 'rb')
         self.plf = ELFFile(self._f)
         self.module_id = module_id
-        self.dol_symbols, self.dol_duplicates, _ = self.map_dol_symbols(dol_path)
-        self.rel_symbols = self.map_rel_symbols(ext_rels)
+        self.dol_symbols, self.dol_duplicates, _ = self._map_dol_symbols(dol_path)
+        self.rel_symbols = self._map_rel_symbols(ext_rels)
         self.symbols, self.duplicates, self.symbols_id = Symbol.map_symbols(self._f, self.plf)
-        self._symdefs = self.map_rel_symdefs(base_rel_path)
+        self._symdefs = self._map_rel_symdefs(base_rel_path)
 
         if num_sections is None:
             num_sections = self.plf.num_sections()
@@ -47,7 +47,7 @@ class RelLinker:
     def __del__(self):
         self._f.close()
 
-    def map_dol_symbols(self, dol_path: str) -> Tuple[SymNameMap, SymBadNames, SymIdMap]:
+    def _map_dol_symbols(self, dol_path: str) -> Tuple[SymNameMap, SymBadNames, SymIdMap]:
         """Looking up symbols by name in the dol is slow, so a dict is made in advance"""
 
         with open(dol_path, 'rb') as f:
@@ -57,7 +57,7 @@ class RelLinker:
             # Parse symbol table
             return Symbol.map_symbols(f, dol)
     
-    def map_rel_symbols(self, ext_rels: List[str]) -> \
+    def _map_rel_symbols(self, ext_rels: List[str]) -> \
         Dict[int, Tuple[SymNameMap, SymBadNames, SymIdMap]]:
         """Looking up symbols by name in other rels is slow, so a dict is made in advance"""
 
@@ -69,7 +69,7 @@ class RelLinker:
         
         return ret
     
-    def map_rel_symdefs(self, base_rel_path: str):
+    def _map_rel_symdefs(self, base_rel_path: str):
         """Maps symbols given in the relsymdef section"""
 
         # Try get section
@@ -98,7 +98,7 @@ class RelLinker:
 
         return ret
 
-    def get_sections_to_link(self) -> List[int]:
+    def _get_sections_to_link(self) -> List[int]:
         """Finds the sections that should be included in the rel"""
 
         return [
@@ -108,13 +108,13 @@ class RelLinker:
             and sec.name not in  ("forcestrip", "relsymdef")
         ]
     
-    def get_symbol_by_name(self, name: str) -> Symbol:
+    def _get_symbol_by_name(self, name: str) -> Symbol:
         """Gets a symbol from this rel by name"""
 
         assert name not in self.duplicates, f"Ambiguous duplicate symbol name {name}"
         return self.symbols[name]
 
-    def find_symbol(self, sym_id: int) -> Tuple[int, int, int]:
+    def _find_symbol(self, sym_id: int) -> Tuple[int, int, int]:
         """Finds a symbol in this rel or its dol by id
         Returns module id, section id, offset into section"""
 
@@ -159,7 +159,7 @@ class RelLinker:
 
             return self.module_id, sec, sym.st_value
 
-    def relocate_section(self, sec_id: int) -> Tuple[bytes, List[RelReloc]]:
+    def _relocate_section(self, sec_id: int) -> Tuple[bytes, List[RelReloc]]:
         """Create the binary data and relocation list for a section"""
 
         # Get section
@@ -173,7 +173,7 @@ class RelLinker:
             return sec.data(), []
 
         # Get unresolved
-        unresolved = self.get_symbol_by_name("_unresolved")
+        unresolved = self._get_symbol_by_name("_unresolved")
 
         # Init return data
         dat = bytearray(sec.data())
@@ -181,7 +181,7 @@ class RelLinker:
 
         # Apply possible relocations, save others for later
         for reloc in Relocation.read_relocs(self._f, rela):
-            target_module, target_section, target_offset = self.find_symbol(reloc.r_info_sym)
+            target_module, target_section, target_offset = self._find_symbol(reloc.r_info_sym)
             target_offset += reloc.r_addend
 
             offs = reloc.r_offset
@@ -222,7 +222,7 @@ class RelLinker:
 
         return dat, relocs
     
-    def make_section_relocations(self, sec_id: int, relocs: List[RelReloc]) -> Dict[int, bytearray]:
+    def _make_section_relocations(self, sec_id: int, relocs: List[RelReloc]) -> Dict[int, bytearray]:
         """Creates the binary data for a secton's relocations"""
 
         # Get modules referenced
@@ -266,7 +266,7 @@ class RelLinker:
 
         with open(out_path, 'wb') as out:
             # Get relevant sections
-            file_sections = self.get_sections_to_link()
+            file_sections = self._get_sections_to_link()
             assert len(file_sections) < self.num_sections, f"Too many sections to link"
 
             def write_at(offs, size, val):
@@ -282,9 +282,9 @@ class RelLinker:
             write_at(RelOffs.VERSION_OFFSET, 4, 3)
             write_at(RelOffs.MODULE_ID, 4, self.module_id)
             write_at(RelOffs.NUM_SECTIONS, 4, self.num_sections)
-            prolog = self.get_symbol_by_name("_prolog")
-            epilog = self.get_symbol_by_name("_epilog")
-            unresolved = self.get_symbol_by_name("_unresolved")
+            prolog = self._get_symbol_by_name("_prolog")
+            epilog = self._get_symbol_by_name("_epilog")
+            unresolved = self._get_symbol_by_name("_unresolved")
             write_at(RelOffs.PROLOG_SECTION, 1, prolog.st_shndx)
             write_at(RelOffs.EPILOG_SECTION, 1, epilog.st_shndx)
             write_at(RelOffs.UNRESOLVED_SECTION, 1, unresolved.st_shndx)
@@ -312,7 +312,7 @@ class RelLinker:
                     align = max(align, sec["sh_addralign"])
 
                     # Get section contents and relocs
-                    data, rels = self.relocate_section(sec_id)
+                    data, rels = self._relocate_section(sec_id)
 
                     # Append contents
                     section_offsets[sec_id], padding = align_to(
@@ -327,7 +327,7 @@ class RelLinker:
                         section_masks[sec_id] = 1
 
                     # Append reloc data
-                    new_rel_bins = self.make_section_relocations(sec_id, rels)
+                    new_rel_bins = self._make_section_relocations(sec_id, rels)
                     for module in new_rel_bins:
                         rel_bins[module].extend(new_rel_bins[module])
                 else: # SHT_NOBITS
