@@ -401,7 +401,7 @@ class RelLinker:
                 # Write relocations
                 out.write(rel_bins[module])
 
-if __name__=="__main__":
+if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
     parser = argparse.ArgumentParser(description="Convert ELF to REL")
     parser.add_argument("rel_input", type=str, help="REL ELF input path")

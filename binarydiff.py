@@ -9,8 +9,6 @@ from binarybase import BinaryReader
 from binaryrel import RelReader, RelSize
 from binaryyml import load_binary_yml
 
-col.init()
-
 def print_diff(name: str, a: int, b: int):
     """Prints the diff of two integer values"""
     
@@ -74,12 +72,15 @@ def diff_relocs(good: RelReader, test: RelReader):
             )
             print_diff("Write Addr", r1.write_addr, r2.write_addr)
 
-if __name__=="__main__":
+if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser()
     parser.add_argument("good", type=str, help="Path to good binary yml")
     parser.add_argument("test", type=str, help="Path to test binary")
     args = parser.parse_args()
+
+    # Init colorama
+    col.init()
 
     # Load binaries
     good = load_binary_yml(args.good)

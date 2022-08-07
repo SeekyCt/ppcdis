@@ -174,7 +174,7 @@ def find_containing_source(sources: List[Source], addr: int) -> str:
     # Not found
     return None
 
-if __name__=="__main__":
+if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Query a slice yml")
     parser.add_argument("binary_path", type=str, help="Binary input yml path")

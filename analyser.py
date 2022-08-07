@@ -977,7 +977,7 @@ class Analyser:
 
 # TODO: validate blr/bctr/etc before text pointer
 
-if __name__=="__main__":
+if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Analyse a binary for its labels and relocations")
     parser.add_argument("binary_path", type=str, help="Binary input yml path")

@@ -260,7 +260,7 @@ def reverse_lookup(yml: Dict, binary: str, source_name: str, name: str) -> int:
     else:
         return None
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = ArgumentParser()
     hex_int = lambda s: int(s, 16)
     parser.add_argument("symbol_map_path", type=str, help="Symbol map input path")

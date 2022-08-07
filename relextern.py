@@ -37,7 +37,7 @@ def get_rel_externs(dest: Dict[int, str], rel: RelReader):
         else:
             dest[target] = LabelType.DATA
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = ArgumentParser(description="Analyse rel binaries for their external labels")
     parser.add_argument("output_path", type=str, help="Labels output path")
     parser.add_argument("binary_paths", type=str, nargs='+', help="Binary input yml paths")

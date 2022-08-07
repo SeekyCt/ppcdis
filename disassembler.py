@@ -671,7 +671,7 @@ class Disassembler:
                 + '\n'
             )
         
-if __name__=="__main__":
+if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
     parser = ArgumentParser(description="Disassemble a binary")
     parser.add_argument("binary_path", type=str, help="Binary input yml path")

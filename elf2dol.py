@@ -71,7 +71,7 @@ def elf_to_dol(in_path: str, out_path: str):
         write_u32(elf["e_entry"])
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert ELF to DOL")
     parser.add_argument("input", type=str, help="ELF input path")
     parser.add_argument("-o", "--out", type=str, help="DOL output path")
