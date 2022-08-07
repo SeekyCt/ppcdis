@@ -11,10 +11,10 @@ from typing import Dict, List, Set, Tuple
 
 from capstone import CsInsn
 from capstone.ppc import *
-from binarydol import DolReader
 
-from binaryyml import load_binary_yml
 from binarybase import BinaryReader, BinarySection, SectionType
+from binarydol import DolReader
+from binaryyml import load_binary_yml
 from csutil import DummyInstr, check_overwrites, cs_disasm, sign_half
 from fileutil import dump_to_pickle, load_from_pickle
 from instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,

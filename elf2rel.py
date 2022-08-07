@@ -4,9 +4,8 @@ Converts an ELF to a REL file
 
 import argparse
 from collections import defaultdict
-from dataclasses import dataclass
-from struct import pack, unpack_from
-from typing import Dict, List, Set, Tuple
+from struct import unpack_from
+from typing import Dict, List, Tuple
 
 from elftools.elf.constants import SH_FLAGS
 from elftools.elf.elffile import ELFFile

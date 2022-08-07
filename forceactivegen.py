@@ -3,8 +3,8 @@ Add forceactive entries to an LCF file from relextern output
 """
 
 from argparse import ArgumentParser
-from binaryyml import load_binary_yml
 
+from binaryyml import load_binary_yml
 from fileutil import load_from_pickle
 from symbols import SymbolGetter
 
