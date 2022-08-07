@@ -4,7 +4,7 @@ Rips an asset from a binary
 
 from argparse import ArgumentParser
 
-from binaryyml import load_binary_yml
+from .binaryyml import load_binary_yml
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)

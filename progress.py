@@ -5,11 +5,11 @@ Utility for progress calculation
 from argparse import ArgumentParser
 from typing import Dict, List
 
-from binarybase import BinarySection
-from binaryyml import load_binary_yml
-from fileutil import dump_to_json_str, load_from_pickle
-from slices import Source, load_slice_yaml
-from symbols import LabelType
+from .binarybase import BinarySection
+from .binaryyml import load_binary_yml
+from .fileutil import dump_to_json_str, load_from_pickle
+from .slices import Source, load_slice_yaml
+from .symbols import LabelType
 
 def calc_progress_info(sec: BinarySection, sources: List[Source], labels: Dict[int, str]):
     # Add slice sizes

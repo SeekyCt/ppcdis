@@ -5,9 +5,9 @@ Diffs the sections and relocations (where possible) of a dol/rel file
 from argparse import ArgumentParser
 import colorama as col
 
-from binarybase import BinaryReader
-from binaryrel import RelReader, RelSize
-from binaryyml import load_binary_yml
+from .binarybase import BinaryReader
+from .binaryrel import RelReader, RelSize
+from .binaryyml import load_binary_yml
 
 def print_diff(name: str, a: int, b: int):
     """Prints the diff of two integer values"""

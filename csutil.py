@@ -9,7 +9,7 @@ import struct
 from capstone import Cs, CS_ARCH_PPC, CsInsn, CS_MODE_32, CS_MODE_BIG_ENDIAN
 from capstone.ppc import *
 
-from instrcats import (blacklistedInsns, firstGprWriteInsns, firstLastGprWriteInsns, 
+from .instrcats import (blacklistedInsns, firstGprWriteInsns, firstLastGprWriteInsns, 
                        lastGprWriteInsns, manyGprWriteInsns)
 
 @dataclass

@@ -5,7 +5,7 @@ Handling of user-provided hints
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
-from fileutil import load_from_yaml
+from .fileutil import load_from_yaml
 
 class OverrideManager(ABC):
     """Class to handle user-provided information"""

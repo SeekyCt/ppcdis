@@ -4,9 +4,9 @@ Generates a string order dummy for a file
 
 from argparse import ArgumentParser
 
-from binarybase import BinaryReader
-from binaryyml import load_binary_yml
-from binaryrel import RelReader
+from .binarybase import BinaryReader
+from .binaryyml import load_binary_yml
+from .binaryrel import RelReader
 
 # TODO: non-pooled string support
 

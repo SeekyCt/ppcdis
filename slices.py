@@ -6,9 +6,9 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
-from binaryyml import load_binary_yml
-from binarybase import BinarySection
-from fileutil import dump_to_json_str, load_from_yaml
+from .binaryyml import load_binary_yml
+from .binarybase import BinarySection
+from .fileutil import dump_to_json_str, load_from_yaml
 
 @dataclass(frozen=True)
 class Slice:

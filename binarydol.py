@@ -5,7 +5,7 @@ Binary reader for DOL files
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from binarybase import BinaryReader, BinarySection, SectionType
+from .binarybase import BinaryReader, BinarySection, SectionType
 
 @dataclass
 class DolSectionDef:

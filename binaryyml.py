@@ -4,10 +4,10 @@ Loader for a binary from a yml
 
 from typing import Dict
 
-from binarybase import BinaryReader
-from binarydol import DolReader
-from binaryrel import RelReader
-from fileutil import load_from_yaml
+from .binarybase import BinaryReader
+from .binarydol import DolReader
+from .binaryrel import RelReader
+from .fileutil import load_from_yaml
 
 # Cache for already loaded binaries
 cache = {}

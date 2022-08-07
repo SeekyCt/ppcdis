@@ -7,8 +7,8 @@ from enum import IntEnum, unique
 from struct import pack
 from typing import Dict, List, Tuple
 
-from binarybase import BinaryReader, BinarySection, SectionType
-from binarydol import DolReader
+from .binarybase import BinaryReader, BinarySection, SectionType
+from .binarydol import DolReader
 
 @unique
 class RelOffs(IntEnum):

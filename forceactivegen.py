@@ -5,9 +5,9 @@ Add forceactive entries to an LCF file from relextern output
 from argparse import ArgumentParser
 from typing import List
 
-from binaryyml import load_binary_yml
-from fileutil import load_from_pickle
-from symbols import SymbolGetter
+from .binaryyml import load_binary_yml
+from .fileutil import load_from_pickle
+from .symbols import SymbolGetter
 
 def apply_forceactive(txt: str, externs: List[int]) -> str:
     return txt.replace(

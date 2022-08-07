@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 import re
 
-from binarybase import BinaryReader, BinarySection
-from binaryyml import load_binary_yml
-from fileutil import dump_to_json_str, load_from_pickle, load_from_yaml
+from .binarybase import BinaryReader, BinarySection
+from .binaryyml import load_binary_yml
+from .fileutil import dump_to_json_str, load_from_pickle, load_from_yaml
 
 class LabelType:
     FUNCTION = "FUNCTION"

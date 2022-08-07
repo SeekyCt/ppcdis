@@ -12,9 +12,9 @@ from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
 from elftools.elf.sections import Section
 
-from binaryrel import RelOffs, RelReader, RelReloc, RelSize, RelType
-from binaryyml import load_binary_yml
-from fastelf import Relocation, SHN_UNDEF, SymBadNames, SymIdMap, SymNameMap, Symbol
+from .binaryrel import RelOffs, RelReader, RelReloc, RelSize, RelType
+from .binaryyml import load_binary_yml
+from .fastelf import Relocation, SHN_UNDEF, SymBadNames, SymIdMap, SymNameMap, Symbol
 
 def align_to(offs: int, align: int) -> Tuple[int, int]:
     """Aligns an offset and gets the padding required"""

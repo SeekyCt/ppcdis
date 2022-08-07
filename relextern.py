@@ -4,12 +4,12 @@ Rel external label preprocessor
 
 from argparse import ArgumentParser
 from typing import Dict
-from symbols import LabelType
 
-from binarybase import SectionType
-from binaryrel import RelReader, RelType
-from binaryyml import load_binary_yml
-from fileutil import dump_to_pickle
+from .binarybase import SectionType
+from .binaryrel import RelReader, RelType
+from .binaryyml import load_binary_yml
+from .fileutil import dump_to_pickle
+from .symbols import LabelType
 
 def get_rel_externs(dest: Dict[int, str], rel: RelReader):
     for rlc in rel.relocs:

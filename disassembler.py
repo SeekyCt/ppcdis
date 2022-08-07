@@ -11,16 +11,16 @@ from typing import Dict, List
 import capstone
 from capstone.ppc import *
 
-from analyser import Reloc, RelocType
-from binaryyml import load_binary_yml
-from binarybase import BinaryReader, BinarySection, SectionType
-from csutil import DummyInstr, sign_half, cs_disasm 
-from instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
+from .analyser import Reloc, RelocType
+from .binaryyml import load_binary_yml
+from .binarybase import BinaryReader, BinarySection, SectionType
+from .csutil import DummyInstr, sign_half, cs_disasm 
+from .instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
                        signExtendInsns, storeLoadInsns, renamedInsns)
-from overrides import OverrideManager
-from slices import Slice
-from symbols import SymbolGetter, has_bad_chars, is_mangled
-from fileutil import load_from_pickle
+from .overrides import OverrideManager
+from .slices import Slice
+from .symbols import SymbolGetter, has_bad_chars, is_mangled
+from .fileutil import load_from_pickle
 
 class DisassemblyOverrideManager(OverrideManager):
     """Disassembly category OverrideManager"""
