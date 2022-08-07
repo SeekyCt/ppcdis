@@ -680,7 +680,7 @@ if __name__=="__main__":
     parser.add_argument("output_paths", type=str, nargs='+', help="Disassembly output path(s)")
     parser.add_argument("-m", "--symbol-map-path", type=str, help="Symbol map input path")
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
-    parser.add_argument("-s", "--slice", type=hex_int, nargs=2,
+    parser.add_argument("-s", "--slice", type=hex_int, nargs='+',
                         help="Disassemble a slice (give start & end)")
     parser.add_argument("-j", "--jumptable", type=hex_int, nargs='+',
                         help="Generate jumptable workarounds (give starts)")
@@ -715,8 +715,11 @@ if __name__=="__main__":
     dis = Disassembler(binary, args.symbol_map_path, args.source_name, args.labels_path,
                        args.relocs_path, args.overrides, args.quiet)
     if args.slice is not None:
-        assert len(args.output_paths) == 1, "--slice currently only takes 1 output"
-        dis.output_slice(args.output_paths[0], *args.slice)
+        assert len(args.slice) % 2 == 0, "Missisng slice end address"
+        assert len(args.slice) // 2 == len(args.output_paths), \
+            "Number of slices must equal number of output paths"
+        for path, start, end in zip(args.output_paths, *[iter(args.slice)]*2):
+            dis.output_slice(path, start, end)
     elif args.function is not None:
         assert len(args.function) == len(args.output_paths), \
             "Number of function addresses must equal number of output paths"
