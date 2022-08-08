@@ -15,5 +15,10 @@ setup(
         'pyelftools',
         'pylibyaml',
         'PyYAML'
-    ]
+    ],
+    entry_points={
+        'console_scripts': [
+            'relextern = relextern.py'
+        ]
+    }
 )
