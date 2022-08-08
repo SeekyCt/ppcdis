@@ -5,8 +5,8 @@ Generates a float/double order dummy for a file
 from .binarybase import BinaryReader
 from .binaryrel import RelReader
 
-def order_floats(binary: BinaryReader, start_addr: int, end_addr: int, use_asm=False, use_sda=False,
-             double=False):
+def order_floats(binary: BinaryReader, start_addr: int, end_addr: int, use_asm=False,
+                 use_sda=False, double=False):
     if double:
         func = binary.read_double
         action = "lfd f1, {}" if use_asm else "__dummy_double({})"
