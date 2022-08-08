@@ -16,3 +16,5 @@ __pycache__
 *.c
 *.dll
 *.exe
+build
+*.egg-info

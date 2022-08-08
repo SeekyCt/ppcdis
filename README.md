@@ -16,7 +16,7 @@ See the [Super Paper Mario Decompilation](https://github.com/SeekyCt/spm-decomp)
 - A python API is exposed in the `ppcdis` folder for pure python build systems to make use of too
     - Generally, any new features for the python API should also be exposed by the command line API too
     - Importing anything that isn't included in `__init__.py` isn't officially supported
-    - Like the rest of the project, the API won't be guaranteed any backwards compatibility (and is likely to change more than the command line API will)
+    - Like the rest of the project, the API won't be guaranteed any backwards compatibility (and is likely to change more than the command line API will).  **This means users should not be required to install this globally, use something like venv instead**
 
 ## Credits
 
