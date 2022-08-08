@@ -27,7 +27,7 @@ def align_to(offs: int, align: int) -> Tuple[int, int]:
     return new_offs, padding
 
 class RelLinker:
-    def __init__(self, dol_path: str, plf_path: str, ext_rels: List[str], module_id: int,
+    def __init__(self, dol_path: str, plf_path: str, module_id: int, ext_rels=None,
                  num_sections=None, name_offset=0, name_size=0, base_rel_path=None):
         self._f = open(plf_path, 'rb')
         self.plf = ELFFile(self._f)
@@ -59,6 +59,9 @@ class RelLinker:
     def _map_rel_symbols(self, ext_rels: List[str]) -> \
         Dict[int, Tuple[SymNameMap, SymBadNames, SymIdMap]]:
         """Looking up symbols by name in other rels is slow, so a dict is made in advance"""
+
+        if ext_rels is None:
+            return {}
 
         ret = {}
         for module_id, path in zip(*[iter(ext_rels)]*2):

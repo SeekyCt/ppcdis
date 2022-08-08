@@ -37,6 +37,6 @@ if __name__ == "__main__":
 
     num_sections = args.num_sections
 
-    linker = RelLinker(dol_path, in_path, args.ext_rels, module_id, num_sections,
+    linker = RelLinker(dol_path, in_path, module_id, args.ext_rels, num_sections,
                        args.name_offset, args.name_size, args.base_rel)
     linker.link_rel(out_path)
