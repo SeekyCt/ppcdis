@@ -8,5 +8,12 @@ setup(
         "License :: OSI Approved :: MIT License"
     ],
     packages=["ppcdis"],
-    python_requires=">=3.8"
+    python_requires=">=3.8",
+    install_requires=[
+        'colorama',
+        'capstone',
+        'pyelftools',
+        'pylibyaml',
+        'PyYAML'
+    ]
 )
