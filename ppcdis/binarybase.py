@@ -71,7 +71,7 @@ class BinarySection:
         if self.nobits:
             parts.append("@nobits")
         
-        return ", ".join(parts)
+        return ", ".join(parts) + '\n'
 
     def get_balign(self) -> str:
         """Gets the balign text to start a slice with in disassembly"""
