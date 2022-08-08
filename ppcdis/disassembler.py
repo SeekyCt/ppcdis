@@ -157,8 +157,8 @@ class DisasmLine:
         return f"{prefix}{comment}{self.mnemonic:<12}{self.operands}"
         
 class Disassembler:
-    def __init__(self, binary: BinaryReader, symbols_path: str, source_name:str, labels_path: str,
-                 reloc_path: str, overrides_path=None, quiet=False):
+    def __init__(self, binary: BinaryReader, labels_path: str, reloc_path: str, symbols_path=None,
+                 overrides_path=None, source_name=None, quiet=False):
         self._bin = binary
         self._sym = SymbolGetter(symbols_path, source_name, labels_path, binary)
         self._rlc = RelocGetter(binary, self._sym, reloc_path)

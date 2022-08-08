@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
     binary = load_binary_yml(args.binary_path)
 
-    dis = Disassembler(binary, args.symbol_map_path, args.source_name, args.labels_path,
-                       args.relocs_path, args.overrides, args.quiet)
+    dis = Disassembler(binary, args.labels_path, args.relocs_path, args.symbol_map_path,
+                       args.overrides, args.source_name, args.quiet)
     if args.slice is not None:
         assert len(args.slice) % 2 == 0, "Missisng slice end address"
         assert len(args.slice) // 2 == len(args.output_paths), \
