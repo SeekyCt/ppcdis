@@ -72,7 +72,7 @@ def cs_disasm(addr: int, dat: bytes, quiet=False) -> OrderedDict[int, CsInsn]:
     i = 0
     while i < len(dat):
         # Get capstone to disassemble as many as possible
-        for instr in cs.disasm(dat[i:], addr + i, (len(dat) // 4) - i):
+        for instr in cs.disasm(dat[i:], addr + i, (len(dat) - i) // 4):
             if cs_should_ignore(instr):
                 instr = DummyInstr(instr.address, instr.bytes)
 
