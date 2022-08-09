@@ -342,7 +342,7 @@ class Disassembler:
 
     def _process_instr(self, instr: capstone.CsInsn, inline=False, hashable=False, mangled=None
                       ) -> str:
-        """Takes a capstone instruction and converts it to a DisasmLine"""
+        """Takes a capstone instruction and converts it to text"""
 
         if not isinstance(instr, DummyInstr):
             ret = DisasmLine(instr, instr.mnemonic, instr.op_str)
@@ -370,7 +370,7 @@ class Disassembler:
         return ret.to_txt(self._sym, inline, hashable)
     
     def _process_data(self, addr: int, val: bytes, enable_ref=True) -> str:
-        """Takes a word of data and converts it to a DisasmLine"""
+        """Takes a word of data and converts it to text"""
 
         # TODO: GCC jump tables
         ops = f"0x{val.hex()}"
