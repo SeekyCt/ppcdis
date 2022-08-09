@@ -79,7 +79,10 @@ class SymbolGetter:
                 self._sym[addr] = Symbol(name, True)
             elif t == LabelType.JUMPTABLE:
                 # Jumptables shouldn't be named
-                assert name not in symbols, f"Tried to rename jumptable {addr:x} ({symbols[addr]})"
+                assert addr not in symbols, (
+                    f"Tried to rename jumptable {addr:x} ({symbols[addr]}). "
+                    "If this isn't a jumptable, please report this"
+                )
                 self._sym[addr] = Symbol(f"jtbl_{addr:x}", True)
             else:
                 assert 0, f"{addr:x} has invalid type {t}"
