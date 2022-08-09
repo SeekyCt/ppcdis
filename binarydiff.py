@@ -9,7 +9,7 @@ from ppcdis import diff_secs, diff_relocs, load_binary_yml, RelReader
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="Diff the sections and relocations of dol/rel files")
     parser.add_argument("good", type=str, help="Path to good binary yml")
     parser.add_argument("test", type=str, help="Path to test binary")
     args = parser.parse_args()

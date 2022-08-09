@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from ppcdis import dump_to_json_str, load_binary_yml, load_from_yaml, lookup, reverse_lookup
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="Query a symbols yml file")
     hex_int = lambda s: int(s, 16)
     parser.add_argument("symbol_map_path", type=str, help="Symbol map input path")
     parser.add_argument("--get-name", type=hex_int, help="Get symbol name for address")

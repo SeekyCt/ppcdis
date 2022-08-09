@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from ppcdis import calc_progress_info, dump_to_json_str, load_binary_yml, load_slice_yaml
 
 if __name__ == "__main__":
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="Calculate progress info for a project")
     parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("labels_path", type=str, help="Labels pickle input path")
     parser.add_argument("slices_path", type=str, help="Slices yml input path")
