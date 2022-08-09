@@ -396,6 +396,10 @@ class Disassembler:
         Mangled will track any mangled symbol names required to be defined if not None (for inline)
         """
 
+        assert start & 3 == 0, f"Unaligned start address {start:x}"
+        assert end & 3 == 0, f"Unaligned end address {start:x}"
+        assert start < end, f"Start address {start:x} after end address {end:x}" 
+
         if sec.type == SectionType.TEXT:
             # Disassemble
             lines = cs_disasm(start, self._bin.read(start, end - start), self._quiet)
@@ -448,10 +452,15 @@ class Disassembler:
 
         assert section.addr <= sl.start < sl.end <= section.addr + section.size, \
                f"Invalid slice {sl} for section {section.name}"
+
+        assert section.validate_slice_bound(sl.start), \
+            f"Slice {sl} start isn't aligned with {section.name} balign of {section.get_balign()}"
+        assert section.validate_slice_bound(sl.end), \
+            f"Slice {sl} end isn't aligned with {section.name} balign of {section.get_balign()}"
         
         return (
             section.get_start_text() +
-            section.get_balign() +
+            section.get_balign_text() +
             self._disasm_range(section, sl.start, sl.end)
         )
 

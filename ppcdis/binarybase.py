@@ -73,15 +73,45 @@ class BinarySection:
         
         return ", ".join(parts) + '\n'
 
-    def get_balign(self) -> str:
-        """Gets the balign text to start a slice with in disassembly"""
+    def validate_slice_bound(self, addr: int) -> bool:
+        """Checks if a slice start/end addr is valid based on balign"""
+
+        # Get balign
+        balign = self.get_balign()
+
+        # Skip if none
+        if balign == 0:
+            return True
+
+        # Allow unaligned if it ends at the section end
+        if addr == self.addr + self.size:
+            return True
+
+        # Check alignment
+        mask = balign - 1
+        return (addr & mask) == 0
+
+    def get_balign(self) -> int:
+        """Gets the balign amount of slices in this section"""
 
         if self.balign is None:
-            return "\n.balign 8\n" if self.type != SectionType.TEXT else ""
-        elif self.balign == 0:
-            return ""
+            # Use default
+            return 8 if self.type != SectionType.TEXT else 0
         else:
-            return f"\n.balign {self.balign}\n"
+            # Use custom value
+            return self.balign
+
+    def get_balign_text(self) -> str:
+        """Gets the balign text to start a slice with in disassembly"""
+
+        # Get balign
+        balign = self.get_balign()
+
+        # Emit text if needed
+        if balign != 0:
+            return f"\n.balign {balign}\n"
+        else:
+            return ""
 
     def __repr__(self) -> str:
         """String representation for debugging"""
