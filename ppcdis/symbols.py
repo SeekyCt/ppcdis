@@ -65,6 +65,7 @@ class SymbolGetter:
         # Add labels from analysis
         dat = load_from_pickle(labels_path)
         self._f = []
+        named_labels = []
         for addr, t in dat.items():
             if t == LabelType.FUNCTION:
                 name = symbols.get(addr, f"func_{addr:x}")
@@ -72,7 +73,8 @@ class SymbolGetter:
                 self._f.append(addr)
             elif t == LabelType.LABEL:
                 # Labels shouldn't be named, suggests analysis missed function
-                assert addr not in symbols, f"Tried to name label {addr:x} ({symbols[addr]})"
+                if addr in symbols:
+                    named_labels.append(f"  0x{addr:x}: FUNCTION # {symbols[addr]}")
                 self._sym[addr] = Symbol(f"lbl_{addr:x}", False)
             elif t == LabelType.DATA:
                 name = symbols.get(addr, f"lbl_{addr:x}")
@@ -87,6 +89,12 @@ class SymbolGetter:
             else:
                 assert 0, f"{addr:x} has invalid type {t}"
         self._f.sort()
+
+        assert len(named_labels) == 0, (
+            f"Tried to name some symbols that were detected as labels. You may want to add these "
+            "analysis overrides if they're actually functions:\n\n"
+            "forced_types:\n" + '\n'.join(named_labels) + '\n'
+        )
 
         # Add entry points
         for addr, name in binary.get_entries():
