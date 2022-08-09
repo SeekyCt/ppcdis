@@ -8,7 +8,7 @@ from ppcdis import apply_forceactive, load_binary_yml
 
 if __name__ == "__main__":
     hex_int = lambda s: int(s, 16)
-    parser = ArgumentParser(description="Add forceactive entries to an LCF file from relextern output")
+    parser = ArgumentParser(description="Add relextern labels to forceactive in an LCF file")
     parser.add_argument("lcf_path", type=str, help="LCF input path")
     parser.add_argument("binary_path", type=str, help="Binary input yml path")
     parser.add_argument("labels_path", type=str, help="Labels pickle input path")

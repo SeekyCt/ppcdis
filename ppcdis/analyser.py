@@ -832,7 +832,7 @@ class Analyser:
                 # Follow branch with copy of context
                 # tprint(f"Follow {addr:x}->{dest:x}")
                 jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), jtbl_ctr)
-                self._follow_values(section, dis, dest, func_start, func_end, queue, uppers.copy(), 
+                self._follow_values(section, dis, dest, func_start, func_end, queue, uppers.copy(),
                                     visited, jumptables_copy, changed_r13, changed_r2, indent + 1)
 
             # Thorough won't ever find another upper, terminate early if jumptables and r2/r13

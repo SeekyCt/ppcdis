@@ -224,7 +224,8 @@ class RelLinker:
 
         return dat, relocs
     
-    def _make_section_relocations(self, sec_id: int, relocs: List[RelReloc]) -> Dict[int, bytearray]:
+    def _make_section_relocations(self, sec_id: int, relocs: List[RelReloc]
+                                 ) -> Dict[int, bytearray]:
         """Creates the binary data for a secton's relocations"""
 
         # Get modules referenced

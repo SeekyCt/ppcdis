@@ -13,8 +13,10 @@ if __name__ == "__main__":
     parser.add_argument("start_addr", type=hex_int, help="Stringbase start address")
     parser.add_argument("end_addr", type=hex_int, help="Stringbase end address")
     parser.add_argument("out_path", type=str, help="Text output path")
-    parser.add_argument("--enc", "-e", type=str, default="utf8", help="String & output file encoding")
-    parser.add_argument("--pool", "-p", action="store_true", help="Expect '-str pool' format strings")
+    parser.add_argument("--enc", "-e", type=str, default="utf8",
+                        help="String & output file encoding")
+    parser.add_argument("--pool", "-p", action="store_true",
+                        help="Expect '-str pool' format strings")
     args = parser.parse_args()
 
     binary = load_binary_yml(args.binary_path)

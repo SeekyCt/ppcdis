@@ -228,8 +228,8 @@ class Disassembler:
         
         line.operands = others + ' ' + hex(signed)
     
-    def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine, inline=False, hashable=False,
-                       mangled=None):
+    def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine, inline=False,
+                       hashable=False, mangled=None):
         """Replaces the immediate of a lis with a reference"""
 
         # Get reference info
@@ -340,7 +340,8 @@ class Disassembler:
             else:
                 line.operands = f"{dest}, {reg_name}, {sym}{rel}"
 
-    def _process_instr(self, instr: capstone.CsInsn, inline=False, hashable=False, mangled=None) -> str:
+    def _process_instr(self, instr: capstone.CsInsn, inline=False, hashable=False, mangled=None
+                      ) -> str:
         """Takes a capstone instruction and converts it to a DisasmLine"""
 
         if not isinstance(instr, DummyInstr):

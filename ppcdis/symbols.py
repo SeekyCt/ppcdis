@@ -44,7 +44,8 @@ def is_mangled(name: str) -> bool:
 class SymbolGetter:
     """Class to handle symbol creation and lookup"""
 
-    def __init__(self, symbols_path: str, source_name: str, labels_path: str, binary: BinaryReader):
+    def __init__(self, symbols_path: str, source_name: str, labels_path: str,
+                 binary: BinaryReader):
         # Backup binary reference
         self._bin = binary
 
