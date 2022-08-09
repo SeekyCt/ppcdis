@@ -6,7 +6,7 @@ These tools are focused on automatically generating as much as possible, and doi
 
 **These tools in an early state and therefore large changes may still happen. No backwards compatibility will be guaranteed.**
 
-See [TOOLS.md](TOOLS.md) for information on each tool.
+See [TOOLS.md](TOOLS.md) for information on each tool. (Documentation is currently pretty lacking, so feel free to reach out to me for help)
 
 See the [Super Paper Mario Decompilation](https://github.com/SeekyCt/spm-decomp) for an example of a project using these tools.
 
