@@ -400,6 +400,9 @@ class Disassembler:
         assert start & 3 == 0, f"Unaligned start address {start:x}"
         assert end & 3 == 0, f"Unaligned end address {start:x}"
         assert start < end, f"Start address {start:x} after end address {end:x}" 
+        assert sec.addr <= start < end <= sec.addr + sec.size, \
+            f"Disassembly {start:x}-{end:x} crosses bounds of section {sec.name}"
+
 
         if sec.type == SectionType.TEXT:
             # Disassemble
@@ -451,14 +454,6 @@ class Disassembler:
 
         self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
 
-        assert section.addr <= sl.start < sl.end <= section.addr + section.size, \
-               f"Invalid slice {sl} for section {section.name}"
-
-        assert section.validate_slice_bound(sl.start), \
-            f"Slice {sl} start isn't aligned with {section.name} balign of {section.get_balign()}"
-        assert section.validate_slice_bound(sl.end), \
-            f"Slice {sl} end isn't aligned with {section.name} balign of {section.get_balign()}"
-        
         return (
             section.get_start_text() +
             section.get_balign_text() +
@@ -636,8 +631,6 @@ class Disassembler:
         # Make slice
         section = self._bin.find_section_containing(start)
         sl = Slice(start, end, section.name)
-        assert section == self._bin.find_section_containing(end - 1), \
-            f"Slice {sl} crosses section boundary"
 
         # DEVKITPPC r40+ can give issues with slices not starting with symbols
         if self._sym.get_name(start, miss_ok=True) is None:
