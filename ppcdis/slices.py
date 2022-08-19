@@ -2,6 +2,7 @@
 Helpers for disassembly splitting
 """
 
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
@@ -86,22 +87,30 @@ def load_slice_yaml(path: str, sections: List[BinarySection], base_path='') -> L
     
     # Iterate over all sources in yaml
     sources = []
-    slices = {}
+    slices = defaultdict(list)
     yml = load_from_yaml(path, [])
+    sec_map = {sec.name : sec for sec in sections}
     for source in yml:
         # Add slices to the source & their sections
         src = Source(base_path + source, {})
         sources.append(src)
-        for sec, (start, end) in yml[source].items():
-            assert start & 3 == 0, f"Unaligned slice start {start:x} ({source})"
-            assert end & 3 == 0, f"Unaligned slice end {end:x} ({source})"
+        for sec_name, (start, end) in yml[source].items():
+            # Create slice
+            sl = Slice(start, end, sec_name, base_path + source)
+
+            # Validate
+            sec = sec_map[sec_name]
+            assert sec.validate_slice_bound(sl.start), \
+                f"Slice {sl} start isn't aligned with {sec.name} balign of {sec.get_balign()}"
+            assert sec.validate_slice_bound(sl.end), \
+                f"Slice {sl} end isn't aligned with {sec.name} balign of {sec.get_balign()}"
             assert start < end, f"Backwards slice {start:x}-{end:x} ({source})"
-            sl = Slice(start, end, sec, base_path + source)
-            if sec in slices:
-                slices[sec].append(sl)
-            else:
-                slices[sec] = [sl]
-            src.slices[sec] = sl
+            assert sec.addr <= sl.start < sl.end <= sec.addr + sec.size, \
+                f"Slice {sl} isn't within bounds of section {sec.name}"
+
+            # Register
+            slices[sec_name].append(sl)
+            src.slices[sec_name] = sl
 
     # Fill in gaps 
     extra = fill_sections(slices, sections)
