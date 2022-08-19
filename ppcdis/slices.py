@@ -100,10 +100,7 @@ def load_slice_yaml(path: str, sections: List[BinarySection], base_path='') -> L
 
             # Validate
             sec = sec_map[sec_name]
-            assert sec.validate_slice_bound(sl.start), \
-                f"Slice {sl} start isn't aligned with {sec.name} balign of {sec.get_balign()}"
-            assert sec.validate_slice_bound(sl.end), \
-                f"Slice {sl} end isn't aligned with {sec.name} balign of {sec.get_balign()}"
+            sec.assert_slice_bounds(start, end)
             assert start < end, f"Backwards slice {start:x}-{end:x} ({source})"
             assert sec.addr <= sl.start < sl.end <= sec.addr + sec.size, \
                 f"Slice {sl} isn't within bounds of section {sec.name}"

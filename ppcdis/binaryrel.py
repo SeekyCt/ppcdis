@@ -222,27 +222,32 @@ class RelReader(BinaryReader):
                 if rel.t == RelType.ADDR32:
                     # Replace with address
                     ret.extend(int.to_bytes(target, 4, 'big'))
-                    i += 4
+                    skip = 4
                 elif rel.t == RelType.ADDR16_LO:
                     # Replace with address@l
                     ret.extend(int.to_bytes(target & 0xffff, 2, 'big'))
-                    i += 2
+                    skip = 2
                 elif rel.t == RelType.ADDR16_HA:
                     # Replace with address@ha
                     upper = (target >> 16) & 0xffff
                     if target & 0x8000:
                         upper += 1
                     ret.extend(int.to_bytes(upper, 2, 'big'))
-                    i += 2
+                    skip = 2
                 elif rel.t == RelType.REL24:
                     # Insert delta
                     delta_mask = 0x3ff_fffc
                     delta = (target - (addr + i)) & delta_mask
                     val = int.from_bytes(dat[i:i+4], 'big') & ~delta_mask
                     ret.extend(int.to_bytes(val | delta, 4, 'big'))
-                    i += 4
+                    skip = 4
                 else:
                     assert 0, f"Unsupported relocation made it into _relocs {addr + i:x} {rel}"
+
+                assert len(dat) - i >= skip, \
+                    f"Relocation at {addr+i:x} cut off by read boundaries {addr:x}-{addr+size:x}"
+                i += skip
+
             else:
                 # No relocation, just copy byte
                 ret.append(dat[i])

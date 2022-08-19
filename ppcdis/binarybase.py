@@ -91,6 +91,21 @@ class BinarySection:
         mask = balign - 1
         return (addr & mask) == 0
 
+    def assert_slice_bounds(self, start: int, end: int):
+        """Asserts the start and end of a slice are aligned correctly"""
+
+        if self.type == SectionType.TEXT:
+            # For text, just check word alignment
+            assert start & 3 == 0, f"{self.name} slice start {start:x} not aligned to 4"
+            assert end & 3 == 0, f"{self.name} slice end {end:x} not aligned to 4"
+        else:
+            balign = self.get_balign()
+            # For data, check it matches balign
+            assert self.validate_slice_bound(start), \
+                f"Start address {start:x} isn't aligned with {self.name} balign of {balign}"
+            assert self.validate_slice_bound(end), \
+                f"End address {end:x} isn't aligned with {self.name} balign of {balign}"
+
     def get_balign(self) -> int:
         """Gets the balign amount of slices in this section"""
 

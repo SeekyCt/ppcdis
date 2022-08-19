@@ -417,12 +417,10 @@ class Disassembler:
         Mangled will track any mangled symbol names required to be defined if not None (for inline)
         """
 
-        assert start & 3 == 0, f"Unaligned start address {start:x}"
-        assert end & 3 == 0, f"Unaligned end address {start:x}"
+        sec.assert_slice_bounds(start, end)
         assert start < end, f"Start address {start:x} after end address {end:x}" 
         assert sec.addr <= start < end <= sec.addr + sec.size, \
             f"Disassembly {start:x}-{end:x} crosses bounds of section {sec.name}"
-
 
         if sec.type == SectionType.TEXT:
             # Disassemble
@@ -447,15 +445,48 @@ class Disassembler:
                 while self._bin.read_word(end - 4) == 0:
                     end -= 4
 
+            # Setup
             ret = []
             unaligned = self._sym.get_unaligned_in(start, end)
             unaligned.append(0xffff_ffff) # Hack so that [0] can always be read
+
+            # The ppcdis slice system doesn't support unaligned slices, but other projects using
+            # the python api require it, so the disassembler has support for it.
+            # The balign of all data sections must be set to 0 if using this
+
+            # Disassemble starting unaligned data
+            if start & 3 != 0:
+                # Calculate length
+                rounded = (start + 3) & ~3
+                size = rounded - start
+
+                # Disassemble
+                dat = self._bin.read(start, size)
+                ret.extend(self._process_unaligned_data(start, dat, unaligned))
+
+                # Move to aligned start
+                start = rounded
+            
+            # Prepare end unaligned data
+            if end & 3 != 0:
+                rounded = end & ~3
+                end_size = end - rounded
+                end = rounded
+            else:
+                end_size = 0
+
+            # Disassemble aligned data
             for p in range(start, end, 4):
                 dat = self._bin.read(p, 4)
-                if unaligned[0] < p + 4:
+                if unaligned[0] < p + 4 or p + 4 > end:
                     ret.extend(self._process_unaligned_data(p, dat, unaligned))
                 else:
                     ret.append(self._process_data(p, dat))
+            
+            # Disassemble end unaligned data
+            if end_size > 0:
+                dat = self._bin.read(end, end_size)
+                ret.extend(self._process_unaligned_data(end, dat, unaligned))
 
             return '\n'.join(ret)
 
