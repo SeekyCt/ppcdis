@@ -33,6 +33,16 @@ def load_from_yaml(path: str, default=None):
             ret = default
         return ret
 
+def load_from_yaml_str(s: str, default=None):
+    """Loads an object from a yaml string"""
+
+    if default is None:
+        default = {}
+    ret = yaml.load(s, Loader)
+    if ret is None:
+        ret = default
+    return ret
+
 ##########
 # Pickle #
 ##########

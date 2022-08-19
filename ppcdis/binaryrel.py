@@ -7,6 +7,8 @@ from enum import IntEnum, unique
 from struct import pack
 from typing import Dict, List, Tuple
 
+from ppcdis.fileutil import load_from_yaml_str
+
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydol import DolReader
 
@@ -94,20 +96,19 @@ class RelSectionDef:
     nobits: bool = False
     balign: int = None
 
-default_section_defs = [
-    [ # Text
-        RelSectionDef(".text")
-    ],
-    [ # Data
-        RelSectionDef(".ctors", balign=0),
-        RelSectionDef(".dtors", balign=0),
-        RelSectionDef(".rodata"),
-        RelSectionDef(".data")
-    ],
-    [ # BSS
-        RelSectionDef(".bss")
-    ]
-]
+default_section_defs = load_from_yaml_str("""
+text:
+    .text:
+data:
+    .ctors:
+        balign: 0
+    .dtors:
+        balign: 0
+    .rodata:
+    .data:
+bss:
+    .bss:
+""")
 
 class RelReader(BinaryReader):
     def __init__(self, dol: DolReader, path: str, base_addr: int, bss_addr: int,
@@ -117,18 +118,17 @@ class RelReader(BinaryReader):
         self._base_addr = base_addr
         self._bss_addr = bss_addr
         self._section_defs_raw = section_defs
-        if section_defs is not None:
-            parse = lambda defs: [
-                RelSectionDef(name, **(dat if dat is not None else {}))
-                for name, dat in defs.items()
-            ]
-            self._section_defs = [
-                parse(section_defs["text"]),
-                parse(section_defs["data"]),
-                parse(section_defs["bss"])
-            ]
-        else:
-            self._section_defs = default_section_defs
+        if section_defs is None:
+            section_defs = default_section_defs
+        parse = lambda defs: [
+            RelSectionDef(name, **(dat if dat is not None else {}))
+            for name, dat in defs.items()
+        ]
+        self._section_defs = [
+            parse(section_defs["text"]),
+            parse(section_defs["data"]),
+            parse(section_defs["bss"])
+        ]
 
         # Keep an internal map of the sections including the empty ones (for reloc indices)
         self._rel_sections: List[RelBinarySection] = []

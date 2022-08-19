@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 from .binarybase import BinaryReader, BinarySection, SectionType
+from .fileutil import load_from_yaml_str
 
 @dataclass
 class DolSectionDef:
@@ -16,27 +17,28 @@ class DolSectionDef:
     nobits: bool = False
     balign: int = None
 
-default_section_defs = [
-    [ # Text
-        DolSectionDef(".init"),
-        DolSectionDef(".text")
-    ],
-    [ # Data
-        DolSectionDef("extab_", "a"),
-        DolSectionDef("extabindex_", "a"),
-        DolSectionDef(".ctors", balign=0),
-        DolSectionDef(".dtors", balign=0),
-        DolSectionDef(".rodata"),
-        DolSectionDef(".data"),
-        DolSectionDef(".sdata"),
-        DolSectionDef(".sdata2")
-    ],
-    [ # Bss
-        DolSectionDef(".bss"),
-        DolSectionDef(".sbss"),
-        DolSectionDef(".sbss2")
-    ]
-]
+default_section_defs = load_from_yaml_str("""
+text:
+    .init:
+    .text:
+data:
+    extab_:
+        attr: a
+    extabindex_:
+        attr: a
+    .ctors:
+        balign: 0
+    .dtors:
+        balign: 0
+    .rodata:
+    .data:
+    .sdata:
+    .sdata2:
+bss:
+    .bss:
+    .sbss:
+    .sbss2:
+""")
 
 TEXT_COUNT = 7
 DATA_COUNT = 11
@@ -54,18 +56,17 @@ OFFS_ENTRY = 0xe0
 class DolReader(BinaryReader):
     def __init__(self, path: str, r13: int, r2: int, section_defs: Dict):
         self._section_defs_raw = section_defs
-        if section_defs is not None:
-            parse = lambda defs: [
-                DolSectionDef(name, **(dat if dat is not None else {}))
-                for name, dat in defs.items()
-            ]
-            self._section_defs = [
-                parse(section_defs["text"]),
-                parse(section_defs["data"]),
-                parse(section_defs["bss"])
-            ]
-        else:
-            self._section_defs = default_section_defs
+        if section_defs is None:
+            section_defs = default_section_defs
+        parse = lambda defs: [
+            DolSectionDef(name, **(dat if dat is not None else {}))
+            for name, dat in defs.items()
+        ]
+        self._section_defs = [
+            parse(section_defs["text"]),
+            parse(section_defs["data"]),
+            parse(section_defs["bss"])
+        ]
         self.r13 = r13
         self.r2 = r2
         super().__init__(path)
