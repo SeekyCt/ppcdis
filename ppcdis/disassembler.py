@@ -387,6 +387,26 @@ class Disassembler:
         instr = DummyInstr(addr, val)
         return DisasmLine(instr, ".4byte", ops).to_txt(self._sym)
 
+    def _process_unaligned_data(self, addr: int, dat: bytes, unaligned: List[int]) -> str:
+        """Takes bytes of data and converts them to text"""
+
+        # If starting on a word, check this whole word isn't meant to be a pointer
+        if addr & 3 == 0:
+            ref = self._rlc.get_reference_at(addr)
+            if ref is not None:
+                print(f"Warning: reference to {ref.target:x} at {addr:x} ignored, "
+                        "data is split below word alignment")
+        
+        # Split into individual bytes if a non-aligned reference falls within this word
+        ret = []
+        for i in range(len(dat)):
+            instr = DummyInstr(addr + i, dat[i:i+1])
+            ret.append(DisasmLine(instr, ".byte", hex(dat[i])).to_txt(self._sym))
+            if unaligned[0] == addr + i:
+                unaligned.pop(0)
+
+        return ret
+
     def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
                       hashable=False, mangled=None) -> str:
         """Disassembles a range of assembly or data
@@ -431,21 +451,11 @@ class Disassembler:
             unaligned = self._sym.get_unaligned_in(start, end)
             unaligned.append(0xffff_ffff) # Hack so that [0] can always be read
             for p in range(start, end, 4):
+                dat = self._bin.read(p, 4)
                 if unaligned[0] < p + 4:
-                    dat = self._bin.read(p, 4)
-                    ref = self._rlc.get_reference_at(p)
-                    if ref is not None:
-                        print(f"Warning: reference to {ref.target:x} at {p:x} ignored, "
-                              "data is split below word alignment")
-                    
-                    # Split into individual bytes if a non-aligned reference falls within this word
-                    for i in range(4):
-                        instr = DummyInstr(p + i, dat[i:i+1])
-                        ret.append(DisasmLine(instr, ".byte", hex(dat[i])).to_txt(self._sym))
-                        if unaligned[0] == p + i:
-                            unaligned.pop(0)
+                    ret.extend(self._process_unaligned_data(p, dat, unaligned))
                 else:
-                    ret.append(self._process_data(p, self._bin.read(p, 4)))
+                    ret.append(self._process_data(p, dat))
 
             return '\n'.join(ret)
 
