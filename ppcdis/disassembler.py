@@ -260,7 +260,7 @@ class Disassembler:
         elif ref.t == RelocType.ALGEBRAIC:
             rel = "ha"
         else:
-            assert 0, f"Bad reloc {ref}"
+            assert 0, f"Bad reloc {instr.address:x} -> {ref}"
         line.operands = f"{dest}, {sym}@{rel}"
     
     def _process_lower(self, instr: capstone.CsInsn, line: DisasmLine, inline=False,
@@ -328,11 +328,12 @@ class Disassembler:
                     rel = "-_SDA2_BASE_" if reg == PPC_REG_R2 else "-_SDA_BASE_"
                     self._external_sda = True
                 """
-                assert self._bin.addr_is_local(ref.target), f"SDA reference outside of binary" \
-                    "(probably overwritten r2 that needs pointer block override)"
+                assert self._bin.addr_is_local(ref.target), f"SDA reference outside of binary " \
+                    f"at {instr.address:x} with {ref} (probably code with r2 overwritten, " \
+                    f"if so then add a blocked_pointers override for 0x{instr.address:x})"
                 rel = '@sda21'
                 reg_name = "0"
-                assert reg in (PPC_REG_R13, PPC_REG_R2), f"Bad reloc {ref}"
+                assert reg in (PPC_REG_R13, PPC_REG_R2), f"Bad reloc {instr.address:x} -> {ref}"
 
             # Update operands
             if instr.id in storeLoadInsns:
@@ -381,7 +382,7 @@ class Disassembler:
             else:
                 ref = self._rlc.get_reference_at(addr)
                 if ref is not None:
-                    assert ref.t == RelocType.NORMAL, f"Bad reloc {ref}"
+                    assert ref.t == RelocType.NORMAL, f"Bad reloc {addr:x} -> {ref}"
                     ops = self._sym.get_name(ref.target) + ref.format_offs()
 
         instr = DummyInstr(addr, val)

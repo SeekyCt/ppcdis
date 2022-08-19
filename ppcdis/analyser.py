@@ -244,6 +244,9 @@ class Reloc:
             return sign + hex(offs)
         else:
             return sign + str(offs)
+    
+    def __repr__(self):
+        return f"Reloc({self.t}, 0x{self.target:x}, 0x{self.offs:x})"
 
 class Relocator:
     """Class to handle relocation creation"""

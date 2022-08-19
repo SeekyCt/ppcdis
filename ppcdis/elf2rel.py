@@ -270,7 +270,7 @@ class RelLinker:
         with open(out_path, 'wb') as out:
             # Get relevant sections
             file_sections = self._get_sections_to_link()
-            assert len(file_sections) < self.num_sections, f"Too many sections to link"
+            assert len(file_sections) <= self.num_sections, f"Too many sections to link"
 
             def write_at(offs, size, val):
                 prev = out.tell()
