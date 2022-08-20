@@ -2,7 +2,7 @@
 Analyser for initial project creation
 """
 
-from bisect import bisect
+from bisect import bisect_left
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, IntEnum, unique
@@ -129,6 +129,16 @@ class Labeller:
                         else:
                             assert 0, f"Unexpected external label type {t} at {addr:x}"
 
+    def _commit_function(self, addr: int):
+        """Registers an address in the function list for boundary calculations"""
+
+        # Get position
+        idx = bisect_left(self._f, addr)
+
+        # Add if not already in position
+        if idx == len(self._f) or self._f[idx] != addr:
+            self._f.insert(idx, addr)
+
     def notify_tag(self, addr: int, tag: LabelTag):
         """Registers a label tag for an address"""
 
@@ -137,8 +147,7 @@ class Labeller:
 
         # Add to sorted functions list if needed
         if tag == LabelTag.CALL and LabelTag.CALL not in tags:
-            idx = bisect(self._f, addr)
-            self._f.insert(idx, addr)
+            self._commit_function(addr)
 
         # Register tag
         tags.add(tag)
@@ -153,6 +162,27 @@ class Labeller:
 
         sec = self._bin.find_section_containing(instr_addr)
         return get_containing_function(self._f, instr_addr, sec)
+
+    def commit_pointed_functions(self):
+        """Add functions referenced by pointers"""
+
+        for addr, tags in self._tags.items():
+            # Get containing section
+            sec = self._bin.find_section_containing(addr)
+            if sec.type != SectionType.TEXT:
+                continue
+
+            # CALL will already be registered
+            if LabelTag.CALL in tags:
+                continue
+            
+            # JUMP will already be registered if needed
+            if LabelTag.JUMP in tags:
+                continue
+            
+            # If not given JUMP, PTR implies function
+            if LabelTag.PTR in tags:
+                self._commit_function(addr)            
 
     def _eval_tags(self, addr: int, tags: Set[LabelTag]
                   ) -> str:
@@ -972,6 +1002,9 @@ class Analyser:
 
         # Add SDA relocations now that all uppers are followed to confirm false positives
         self._postprocess_sda()
+
+        # Trust function pointers now for function boundary calculation
+        self._lab.commit_pointed_functions()
 
         # Check for tail calls now functions are better known
         self._postprocess_branches()
