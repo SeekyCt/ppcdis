@@ -193,7 +193,7 @@ def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySe
 
     # Get address before
     if idx == 0:
-        start = 0
+        start = sec.addr
     else:
         start = functions[idx - 1]
 
