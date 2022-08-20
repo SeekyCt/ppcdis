@@ -123,9 +123,9 @@ class Labeller:
                 for addr, t in load_from_pickle(path).items():
                     if binary.addr_is_local(addr):
                         if t == LabelType.FUNCTION:
-                            self._tags[addr].add(LabelTag.CALL)
+                            self.notify_tag(addr, LabelTag.CALL)
                         elif t == LabelType.DATA:
-                            self._tags[addr].add(LabelTag.DATA)
+                            self.notify_tag(addr, LabelTag.DATA)
                         else:
                             assert 0, f"Unexpected external label type {t} at {addr:x}"
 
