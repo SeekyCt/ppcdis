@@ -6,6 +6,7 @@ from typing import Dict, List
 
 from .binarybase import SectionType
 from .binaryrel import RelReader, RelType
+from .fileutil import dump_to_pickle
 from .symbols import LabelType
 
 def get_rel_externs(dest: Dict[int, str], rel: RelReader):
@@ -33,3 +34,12 @@ def get_rel_externs(dest: Dict[int, str], rel: RelReader):
             dest[target] = LabelType.FUNCTION
         else:
             dest[target] = LabelType.DATA
+
+def dump_rel_externs(path: str, rels: List[RelReader]):
+    # Get labels
+    labels = {}
+    for rel in rels:
+        get_rel_externs(labels, rel)
+    
+    # Output
+    dump_to_pickle(path, labels)

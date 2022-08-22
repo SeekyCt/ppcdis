@@ -4,7 +4,7 @@ Rel external label preprocessor
 
 from argparse import ArgumentParser
 
-from ppcdis import dump_to_pickle, get_rel_externs, load_binary_yml
+from ppcdis import dump_rel_externs, load_binary_yml
 
 if __name__ == "__main__":
     parser = ArgumentParser(description="Analyse rel binaries for their external labels")
@@ -18,10 +18,6 @@ if __name__ == "__main__":
         for path in args.binary_paths
     ]
 
-    # Get labels
-    labels = {}
-    for rel in rels:
-        get_rel_externs(labels, rel)
-    
-    # Output
-    dump_to_pickle(args.output_path, labels)
+    # Dump externs
+    dump_rel_externs(args.output_path, rels)
+
