@@ -496,10 +496,16 @@ class Disassembler:
 
         self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
 
+        # DEVKITPPC r40+ can give issues with slices not starting with symbols
+        if self._sym.get_name(sl.start, miss_ok=True) is None:
+            self._sym.create_slice_label(sl.start)
+
         return (
+            ".include \"macros.inc\"\n\n" +
             section.get_start_text() +
             section.get_balign_text() +
-            self._disasm_range(section, sl.start, sl.end)
+            self._disasm_range(section, sl.start, sl.end) +
+            "\n"
         )
 
     def _section_to_txt(self, section: BinarySection) -> str:
@@ -684,12 +690,8 @@ class Disassembler:
         section = self._bin.find_section_containing(start)
         sl = Slice(start, end, section.name)
 
-        # DEVKITPPC r40+ can give issues with slices not starting with symbols
-        if self._sym.get_name(start, miss_ok=True) is None:
-            self._sym.create_slice_label(start)
-
         with open(path, 'w') as f:
-            f.write(".include \"macros.inc\"\n\n" + self._slice_to_text(section, sl) + '\n')
+            f.write(self._slice_to_text(section, sl))
     
     def output_function(self, path: str, addr: int, inline: bool, extra: bool):
         """Outputs a function's disassembly to a file"""
