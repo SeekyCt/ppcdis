@@ -512,14 +512,12 @@ class Disassembler:
             self._disasm_range(section, section.addr, section.addr + section.size)
         )
     
-    def _function_to_text(self, addr: int, inline=False, extra=False, hashable=False, mangled=None
-                         ) -> str:
+    def _function_to_text(self, addr: int, inline=False, extra=False, hashable=False) -> str:
         """Outputs the disassembly of a single function to text
         
         Inline changes the output to CW inline asm syntax
         Extra includes referenced jumptables
         Hashable replaces symbol names with incrementing numeric ids in order of reference
-        Mangled will track any mangled symbol names required to be defined if not None (for inline)
         """
 
         self._print(f"Disassemble function {addr:x}")
@@ -535,7 +533,19 @@ class Disassembler:
         sec = self._bin.find_section_containing(addr, True)
 
         # Disassemble and format
+        if inline:
+            mangled = []
+        else:
+            mangled = None
         ret = [self._disasm_range(sec, start, end, inline, hashable, mangled).lstrip('\n')]
+
+        # Namespaced objects can't be accessed in inline assembly, so their
+        # mangled names with extern "C" are used as a workaround
+        if inline:
+            ret = [
+                f"    UNKNOWN_FUNCTION({name});"
+                for name in mangled
+            ] + ret
 
         # Add jumptables if wanted
         if extra:
@@ -686,19 +696,7 @@ class Disassembler:
 
         with open(path, 'w') as f:
             # Disassemble function
-            mangled = [] if inline else None
-            asm = self._function_to_text(addr, inline, extra, False, mangled)
-
-            # Namespaced objects can't be accessed in inline assembly, so their
-            # mangled names with extern "C" are used as a workaround
-            if inline:
-                declarations = [
-                    f"    UNKNOWN_FUNCTION({name});"
-                    for name in mangled
-                ]
-            else:
-                declarations = []
-            f.write('\n'.join(declarations + [asm]))
+            f.write(self._function_to_text(addr, inline, extra, False))
     
     def output_jumptable(self, path: str, addr: int):
         """Outputs a jumptable C workaround to a file"""
