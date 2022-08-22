@@ -491,7 +491,7 @@ class Disassembler:
 
             return '\n'.join(ret)
 
-    def _slice_to_text(self, section: BinarySection, sl: Slice) -> str:
+    def slice_to_text(self, section: BinarySection, sl: Slice) -> str:
         """Outputs the disassembly of a slice to text"""
 
         self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
@@ -518,7 +518,7 @@ class Disassembler:
             self._disasm_range(section, section.addr, section.addr + section.size)
         )
     
-    def _function_to_text(self, addr: int, inline=False, extra=False, hashable=False) -> str:
+    def function_to_text(self, addr: int, inline=False, extra=False, hashable=False) -> str:
         """Outputs the disassembly of a single function to text
         
         Inline changes the output to CW inline asm syntax
@@ -589,7 +589,7 @@ class Disassembler:
         
         return '\n'.join(ret)
     
-    def _jumptable_to_text(self, addr: int) -> str:
+    def jumptable_to_text(self, addr: int) -> str:
         """Outputs a jumptable C workaround to a text"""
 
         self._print(f"Disassemble jumptable {addr:x}")
@@ -665,7 +665,7 @@ class Disassembler:
             )
     
     def _function_to_hash(self, addr: int) -> str:
-        txt = self._function_to_text(addr, hashable=True)
+        txt = self.function_to_text(addr, hashable=True)
         return sha1(txt.encode()).hexdigest()    
 
     # TODO: separate file writing for API
@@ -691,20 +691,19 @@ class Disassembler:
         sl = Slice(start, end, section.name)
 
         with open(path, 'w') as f:
-            f.write(self._slice_to_text(section, sl))
+            f.write(self.slice_to_text(section, sl))
     
     def output_function(self, path: str, addr: int, inline: bool, extra: bool):
         """Outputs a function's disassembly to a file"""
 
         with open(path, 'w') as f:
-            # Disassemble function
-            f.write(self._function_to_text(addr, inline, extra, False))
+            f.write(self.function_to_text(addr, inline, extra, False))
     
     def output_jumptable(self, path: str, addr: int):
         """Outputs a jumptable C workaround to a file"""
 
         with open(path, 'w') as f:
-            f.write(self._jumptable_to_text(addr))
+            f.write(self.jumptable_to_text(addr))
     
     def output_hashes(self, path: str, no_addrs=False):
         """Outputs hashes to a file"""
