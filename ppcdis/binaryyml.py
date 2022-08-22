@@ -12,7 +12,8 @@ from .fileutil import load_from_yaml
 # Cache for already loaded binaries
 cache = {}
 
-def load_rel_yml(yml: Dict) -> RelReader:
+def load_rel_yml(binary_path: str, func_prefix: str, label_prefix: str, data_prefix: str, yml: Dict
+                ) -> RelReader:
     """Loads a rel binary yml"""
 
     # Load dol if given
@@ -23,7 +24,8 @@ def load_rel_yml(yml: Dict) -> RelReader:
         dol = None
 
     # Load rel
-    rel = RelReader(dol, yml["path"], yml["address"], yml["bss_address"], yml.get("section_defs"))
+    rel = RelReader(dol, binary_path, yml["address"], yml["bss_address"], yml.get("section_defs"),
+                    func_prefix, label_prefix, data_prefix)
 
     # Load other rels
     rels = [rel]
@@ -64,11 +66,17 @@ def load_binary_yml(path: str) -> BinaryReader:
     if binary_type is None:
         binary_type = binary_path.split('.')[-1]
 
+    # Get symbol prefixes
+    func_prefix = yml.get("func_prefix", "func_")
+    label_prefix = yml.get("label_prefix", "lbl_")
+    data_prefix = yml.get("data_prefix", "lbl_")
+    
     # Load binary
     if binary_type == "dol":
-        ret = DolReader(binary_path, yml["r13"], yml["r2"], yml.get("section_defs"))
+        ret = DolReader(binary_path, yml["r13"], yml["r2"], yml.get("section_defs"), func_prefix,
+                        label_prefix, data_prefix)
     elif binary_type == "rel":
-        ret = load_rel_yml(yml)
+        ret = load_rel_yml(binary_path, func_prefix, label_prefix, data_prefix, yml)
     else:
         assert 0, f"Unknown binary type {binary_type}"
     

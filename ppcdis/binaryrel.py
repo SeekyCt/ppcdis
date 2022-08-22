@@ -112,7 +112,7 @@ bss:
 
 class RelReader(BinaryReader):
     def __init__(self, dol: DolReader, path: str, base_addr: int, bss_addr: int,
-                 section_defs: Dict):
+                 section_defs: Dict, func_prefix: str, label_prefix: str, data_prefix: str):
         # Handle params
         self._dol = dol
         self._base_addr = base_addr
@@ -134,7 +134,7 @@ class RelReader(BinaryReader):
         self._rel_sections: List[RelBinarySection] = []
 
         # Call parent constructor
-        super().__init__(path)
+        super().__init__(path, func_prefix, label_prefix, data_prefix)
 
         # Read relocs
         self._read_relocs()
@@ -367,7 +367,8 @@ class RelReader(BinaryReader):
     def load_other(self, path: str) -> "RelReader":
         """Loads another binary of the same type with the same settings"""
 
-        return RelReader(self._dol, path, self._base_addr, self._bss_addr, self._section_defs_raw)
+        return RelReader(self._dol, path, self._base_addr, self._bss_addr, self._section_defs_raw,
+                         self.func_prefix, self.label_prefix, self.data_prefix)
     
     def get_reloc_target(self, reloc: RelReloc) -> int:
         """Calculates the target address of a relocation"""

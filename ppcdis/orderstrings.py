@@ -43,13 +43,13 @@ def order_strings(binary: BinaryReader, start_addr: int, end_addr: int, pool=Fal
     else:
         fmt = "char {lab}[] : 0x{addr:x};"
     matching_at = '\n'.join([
-        fmt.format(lab=f"lbl_{addr:x}", addr=addr)
+        fmt.format(lab=f"{binary.data_prefix}{addr:x}", addr=addr)
         for addr in addrs
     ])
 
     if pool:
         shiftable_at = '\n'.join((
-            f"static char lbl_{start_addr:x}[] = {{",
+            f"static char {binary.data_prefix}{start_addr:x}[] = {{",
             '\n'.join(
                 f"    \"{str}\\0\""
                 for str in strs
@@ -57,7 +57,7 @@ def order_strings(binary: BinaryReader, start_addr: int, end_addr: int, pool=Fal
         ))
     else:
         shiftable_at = '\n'.join(
-            f"static char lbl_{addr:x}[] = \"{str}\";"
+            f"static char {binary.data_prefix}{addr:x}[] = \"{str}\";"
             for addr, str in zip(addrs, strs)
         )
     

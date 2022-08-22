@@ -54,7 +54,8 @@ OFFS_BSS_SIZE = 0xdc
 OFFS_ENTRY = 0xe0
 
 class DolReader(BinaryReader):
-    def __init__(self, path: str, r13: int, r2: int, section_defs: Dict):
+    def __init__(self, path: str, r13: int, r2: int, section_defs: Dict, func_prefix: str,
+                 label_prefix: str, data_prefix: str):
         self._section_defs_raw = section_defs
         if section_defs is None:
             section_defs = default_section_defs
@@ -69,7 +70,7 @@ class DolReader(BinaryReader):
         ]
         self.r13 = r13
         self.r2 = r2
-        super().__init__(path)
+        super().__init__(path, func_prefix, label_prefix, data_prefix)
 
     def _get_sections(self) -> List[BinarySection]:
         """Finds the sections in a binary"""
@@ -166,4 +167,5 @@ class DolReader(BinaryReader):
     def load_other(self, path: str) -> "DolReader":
         """Loads another binary of the same type with the same settings"""
 
-        return DolReader(path, self.r13, self.r2, self._section_defs_raw)
+        return DolReader(path, self.r13, self.r2, self._section_defs_raw, self.func_prefix,
+                         self.label_prefix, self.data_prefix)

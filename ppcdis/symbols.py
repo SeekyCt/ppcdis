@@ -69,16 +69,16 @@ class SymbolGetter:
         named_labels = []
         for addr, t in dat.items():
             if t == LabelType.FUNCTION:
-                name = symbols.get(addr, f"func_{addr:x}")
+                name = symbols.get(addr, f"{binary.func_prefix}{addr:x}")
                 self._sym[addr] = Symbol(name, True)
                 self._f.append(addr)
             elif t == LabelType.LABEL:
                 # Labels shouldn't be named, suggests analysis missed function
                 if addr in symbols:
                     named_labels.append(f"  0x{addr:x}: FUNCTION # {symbols[addr]}")
-                self._sym[addr] = Symbol(f"lbl_{addr:x}", False)
+                self._sym[addr] = Symbol(f"{binary.label_prefix}{addr:x}", False)
             elif t == LabelType.DATA:
-                name = symbols.get(addr, f"lbl_{addr:x}")
+                name = symbols.get(addr, f"{binary.data_prefix}{addr:x}")
                 self._sym[addr] = Symbol(name, True)
             elif t == LabelType.JUMPTABLE:
                 # Jumptables shouldn't be named

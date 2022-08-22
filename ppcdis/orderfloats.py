@@ -46,12 +46,12 @@ def order_floats(binary: BinaryReader, start_addr: int, end_addr: int, use_asm=F
         "}",
         "#pragma pop",
         '\n'.join(
-            at.format(t=t, lab=f"lbl_{addr:x}", addr=addr, sda=sda)
+            at.format(t=t, lab=f"{binary.data_prefix}{addr:x}", addr=addr, sda=sda)
             for fl, addr in floats
         ),
         "#else",
         '\n'.join(
-            f"static const {t} lbl_{addr:x} = {fl};"
+            f"static const {t} {binary.data_prefix}{addr:x} = {fl};"
             for fl, addr in floats
         ),
         "#endif\n"

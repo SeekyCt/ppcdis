@@ -135,7 +135,7 @@ class BinarySection:
                f"0x{self.size:x}, {self.attr})")
 
 class BinaryReader(ABC):
-    def __init__(self, path: str):
+    def __init__(self, path: str, func_prefix: str, label_prefix: str, data_prefix: str):
         with open(path, 'rb') as f:
             self._dat = f.read()
         
@@ -143,6 +143,9 @@ class BinaryReader(ABC):
         self.sections = self._get_sections()
         self._sec_addrs = sorted([sec.addr for sec in self.sections])
         self._externs = self._get_external_binaries()
+        self.func_prefix = func_prefix
+        self.label_prefix = label_prefix
+        self.data_prefix = data_prefix
 
     @abstractmethod
     def _get_sections(self) -> List[BinarySection]:
