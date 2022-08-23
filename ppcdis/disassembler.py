@@ -615,7 +615,7 @@ class Disassembler:
                         )
                     )))
         
-        return '\n'.join(ret), referenced.get_referenced()
+        return '\n'.join(ret), None if referenced is None else referenced.get_referenced()
     
     def function_to_text(self, addr: int, inline=False, extra=False, hashable=False,
                          declare_mangled=True) -> str:
