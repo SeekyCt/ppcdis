@@ -738,7 +738,7 @@ class Disassembler:
         """Outputs a function's disassembly to a file"""
 
         with open(path, 'w') as f:
-            f.write(self.function_to_text(addr, inline, extra, False))
+            f.write(self.function_to_text(addr, inline, extra, False, inline))
     
     def output_jumptable(self, path: str, addr: int):
         """Outputs a jumptable C workaround to a file"""
