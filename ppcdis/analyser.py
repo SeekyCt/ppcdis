@@ -297,6 +297,11 @@ class Relocator:
 
         self._jt[addr] = size
 
+    def get_jump_table_size(self, addr: int):
+        """Gets the size of a jumptable at an address"""
+
+        return self._jt[addr]
+
     def output(self, path: str):
         """Dumps all relocations and jumptables to json"""
 
@@ -394,6 +399,8 @@ class Analyser:
         self._branches = defaultdict(list) # per section queues of tail calls to double check
         self._jt = {} # queue for after second pass, maps bctr addresses to their context backups
         self._sda = {} # queue for after second pass, maps r2/r13 use addresses to their targets
+
+        self._jt_guide = {} # backup for control flow pass, maps bctr addresses to their jumptables
 
         # Tag entry points as bl targets
         for addr, _ in self._bin.get_entries():
@@ -895,6 +902,95 @@ class Analyser:
         if dest < start or dest >= end:
             self._lab.notify_tag(dest, LabelTag.CALL)
 
+    def _follow_flow(self, dis: Dict[int, CsInsn], addr: int, start: int, end: int, is_init: bool,
+                     visited=None, indent=0) -> Set[int]:
+        """Gets the set of addresses reachable within a range from a starting point"""
+
+        # Initialise visited set if this is initial call
+        if visited is None:
+            visited = set()
+
+            # Special case for TRK string
+            if is_init:
+                TRK_STR = b"Metrowerks Target Resident Kernel for PowerPC"
+                if self._bin.read(addr, len(TRK_STR)) == TRK_STR:
+                    str_end = addr + ((len(TRK_STR) + 1 + 3) & ~3)
+                    for i in range(addr, str_end, 4):
+                        visited.add(i)
+                    return visited
+
+        # Follow control flow within bounds
+        while start <= addr < end:
+            # Terminate if already been down this path
+            if addr in visited:
+                break
+
+            # Update visited
+            visited.add(addr)
+
+            # Get instruction
+            instr = dis[addr]
+
+            # Skip dummy instructions
+            # TODO: are any of these branches?
+            if isinstance(instr, DummyInstr):
+                addr += 4
+                continue            
+
+            # Tail call or definite jump
+            if instr.id == PPC_INS_B:
+                dest = instr.operands[-1].imm
+
+                # Mark unused blr after branch as visited
+                # Most commonly seen with tail calls, but sometimes loops have it too
+                if addr + 4 < end:
+                    after = dis[addr + 4]
+                    if not isinstance(after, DummyInstr) and after.id == PPC_INS_BLR:
+                        visited.add(addr + 4)
+
+                # Follow branch if in bounds
+                if start <= dest < end:
+                    addr = dest
+                    continue
+                else:
+                    break
+            
+            # Split path to follow
+            if instr.id == PPC_INS_BC:
+                # Follow branch then come back
+                dest = instr.operands[-1].imm
+                self._follow_flow(dis, dest, start, end, is_init, visited, indent+1)
+
+            # Jumptable or tail call
+            if instr.id == PPC_INS_BCTR:
+                if addr in self._jt_guide:
+                    # Follow flow through all cases
+                    jt = self._jt_guide[addr]
+                    size = self._rlc.get_jump_table_size(jt)
+                    dests = set(self._bin.read_word(p) for p in range(jt, jt + size, 4))
+                    for dest in dests:
+                        self._follow_flow(dis, dest, start, end, is_init, visited, indent+1)
+                else:
+                    # Mark unused blr after tail call as visited
+                    if addr + 4 < end:
+                        after = dis[addr + 4]
+                        if not isinstance(after, DummyInstr) and after.id == PPC_INS_BLR:
+                            visited.add(addr + 4)
+
+            # Return
+            if instr.id in returnBranchInsns:
+                break
+            
+            # Move to next instruction
+            addr += 4
+        else:
+            # TODO: in theory this is useful, but in practice it just complains about weird OS
+            # lib code and savegpr / restgpr / savefpr / restfpr
+            # print(f"Flow violation {start:x} {end:x} {instr}")
+            pass
+    
+        return visited
+
     def _postprocess_section_follows(self, section: BinarySection):
         """Follows all queued instructions in a section"""
 
@@ -955,6 +1051,7 @@ class Analyser:
                 # self._print(f"Confirmed jumptable {jt:x}")
 
                 # Record jumptable
+                self._jt_guide[addr] = jt
                 self._rlc.notify_jump_table(jt, offs)
                 self._lab.notify_tag(jt, LabelTag.JUMPTABLE)
 
@@ -988,6 +1085,45 @@ class Analyser:
             for branch in self._branches[sec_name]:
                 self._check_branch(self._disasm[sec_name], branch)
 
+    def _postprocess_control_flow(self, section: BinarySection):
+        """Checks for missed functions by following instruction control flow"""
+
+        self._print("Postprocessing control flow")
+
+        # Only run on text sections
+        if section.type != SectionType.TEXT:
+            return
+
+        # Get section assembly
+        dis = self._disasm[section.name]
+
+        # Trim bounds for rom copy info
+        finish = section.addr + section.size
+        if section.name == ".init":
+            rci = self._bin.get_rom_copy_info()
+            if rci is not None:
+                finish = rci
+
+        # Iterate over full section
+        addr = section.addr
+        while addr != finish:
+            # Get current function expected bounds
+            start, end = self._lab.get_containing_function(addr)
+
+            # Follow flow from function at current position
+            visited = self._follow_flow(dis, addr, start, end, section.name == ".init")
+            addr = max(visited) + 4
+
+            # Skip any 0 padding
+            dat = self._bin.read_word(addr)
+            while dat == 0 and addr != end:
+                addr += 4
+                dat = self._bin.read_word(addr)
+
+            # Create a new function at position if expected bound not reached
+            if addr != end:
+                self._lab.notify_tag(addr, LabelTag.CALL)
+
     def _second_pass(self):
         """Completes the second analysis pass on all text sections"""
 
@@ -1009,4 +1145,6 @@ class Analyser:
         # Check for tail calls now functions are better known
         self._postprocess_branches()
 
-# TODO: validate blr/bctr/etc before text pointer
+        # Check for unreferenced functions
+        for section in self._bin.sections:
+            self._postprocess_control_flow(section)
