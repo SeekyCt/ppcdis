@@ -1088,11 +1088,11 @@ class Analyser:
     def _postprocess_control_flow(self, section: BinarySection):
         """Checks for missed functions by following instruction control flow"""
 
-        self._print("Postprocessing control flow")
-
         # Only run on text sections
         if section.type != SectionType.TEXT:
             return
+
+        self._print(f"Postprocessing control flow in {section.name}")
 
         # Get section assembly
         dis = self._disasm[section.name]
