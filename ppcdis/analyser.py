@@ -441,13 +441,27 @@ class Analyser:
             tag = LabelTag.CALL
         elif instr.id == PPC_INS_B:
             # An unconditional branch may be to a label, or a function tail call
-            # If this is later bl'd to or pointed to, it'll be promoted to a function
-            # Else, it's automatically demoted to a label
-            tag = LabelTag.UNCONDITIONAL
+            
+            # Get dest instruction
+            sec = self._bin.find_section_containing(dest)
+            dest_instr: CsInsn = self._disasm[sec.name][dest]
 
-            # Queue to check against known function boundaries later
-            sec_name = self._bin.find_section_containing(instr.address).name
-            self._branches[sec_name].append(instr.address)
+            if (
+                not isinstance(dest_instr, DummyInstr) and
+                dest_instr.id == PPC_INS_STWU and 
+                dest_instr.operands[0].reg == PPC_REG_R1 and
+                dest_instr.operands[1].mem.base == PPC_REG_R1
+            ):
+                # A branch to a stwu r1, x (r1) should always be a tail call
+                tag = LabelTag.CALL
+            else:
+                # If this is later bl'd to, pointed to, or found to cross a function boundary,
+                # it'll be promoted to a function. Else, it's automatically demoted to a label
+                tag = LabelTag.UNCONDITIONAL
+
+                # Queue to check against known function boundaries later
+                sec_name = self._bin.find_section_containing(instr.address).name
+                self._branches[sec_name].append(instr.address)
         else:
             # Conditional branches are to labels, which can also be the start of a function
             # if the whole function is a loop
@@ -533,33 +547,31 @@ class Analyser:
             # Create reloc
             self._rlc.notify_reloc(addr, RelocType.NORMAL, val)
 
+    def _disasm_section(self, sec: BinarySection):
+        """Disassembles a text section"""
+
+        # Special case for rom copy info in .init
+        # TODO: more general override for data in code sections?
+        if sec.name == ".init":
+            rci = self._bin.get_rom_copy_info()
+        else:
+            rci = None
+        if rci is not None:
+            text_size = rci - sec.addr
+        else:
+            text_size = sec.size
+        
+        # Disassemble
+        lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size), self._quiet)
+        self._disasm[sec.name] = lines
+
     def _analyse_section(self, sec: BinarySection):
-        """Analyses the contents of the section for the first pass
-        For text sections, the disassembly is returned for use in the second pass"""
+        """Analyses the contents of the section for the first pass"""
 
         if sec.type == SectionType.TEXT:
-            # Special case for rom copy info in .init
-            # TODO: more general override for data in code sections
-            if sec.name == ".init":
-                rci = self._bin.get_rom_copy_info()
-            else:
-                rci = None
-            if rci is not None:
-                text_size = rci - sec.addr
-            else:
-                text_size = sec.size
-            
-            # Disassemble
-            lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size), self._quiet)
-
-            # Analyse
-            for addr in lines:
-                self._analyse_instr(lines[addr])
-
-            # Save disassembly for later
-            self._disasm[sec.name] = lines
+            for _, instr in self._disasm[sec.name].items():
+                self._analyse_instr(instr)
         elif sec.type == SectionType.DATA:
-            # Analyse
             for p in range(sec.addr, sec.addr + sec.size, 4):
                 self._analyse_data(p, self._bin.read_word(p))
         else: # section.type == SectionType.BSS:
@@ -569,6 +581,11 @@ class Analyser:
         """Completes the first analysis pass of all sections"""
 
         self._print("== First Pass ==")
+        for sec in self._bin.sections:
+            if sec.type != SectionType.TEXT:
+                continue
+            self._print(f"Disassemble {sec.name}")
+            self._disasm_section(sec)
         for sec in self._bin.sections:
             self._print(f"Initial pass of {sec.name}")
             self._analyse_section(sec)
