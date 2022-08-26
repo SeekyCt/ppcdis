@@ -19,6 +19,8 @@ if __name__ == "__main__":
     parser.add_argument("--name-offset", type=hex_int, default=0, help="Forced name offset")
     parser.add_argument("--name-size", type=hex_int, default=0, help="Forced name size")
     parser.add_argument("-r", "--base-rel", type=str, help="Base rel yml for sym defs")
+    parser.add_argument("-i", "--ignore-missing", action="store_true",
+                        help="For debugging, don't error when a symbol is not found")
     args = parser.parse_args()
 
     dol_path = args.dol_input
@@ -38,5 +40,5 @@ if __name__ == "__main__":
     num_sections = args.num_sections
 
     linker = RelLinker(dol_path, in_path, module_id, args.ext_rels, num_sections,
-                       args.name_offset, args.name_size, args.base_rel)
+                       args.name_offset, args.name_size, args.base_rel, args.ignore_missing)
     linker.link_rel(out_path)
