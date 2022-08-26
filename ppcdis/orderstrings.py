@@ -5,8 +5,6 @@ Generates a string order dummy for a file
 from .binarybase import BinaryReader
 from .binaryrel import RelReader
 
-# TODO: non-pooled string support
-
 def order_strings(binary: BinaryReader, start_addr: int, end_addr: int, pool=False, enc="utf8"):
     curStr = bytearray()
     strs = []
