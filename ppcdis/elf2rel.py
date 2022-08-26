@@ -42,6 +42,7 @@ class RelLinker:
         self.num_sections = num_sections
         self.name_offset = name_offset
         self.name_size = name_size
+        self._missing_symbols = set()
 
     def __del__(self):
         self._f.close()
@@ -155,7 +156,9 @@ class RelLinker:
 
                     return module_id, rel_sym.st_shndx, rel_sym.st_value
 
-            assert 0, f"Symbol {sym.name} not found"
+            # Save for error later and return a dummy output
+            self._missing_symbols.add(sym.name)
+            return 0, 0, 0
         else:
             # Symbol in this rel
 
@@ -346,6 +349,12 @@ class RelLinker:
             for module in rel_bins:
                 # Add terminator
                 rel_bins[module].extend(RelReloc.quick_binary(0, RelType.RVL_STOP, 0, 0))
+            
+            # Check for undefined symbols
+            assert len(self._missing_symbols) == 0, '\n'.join((
+                "The following symbols are missing: ", 
+                *self._missing_symbols
+            ))
 
             # Write alignments and bss size
             write_at(RelOffs.ALIGN, 4, align)
