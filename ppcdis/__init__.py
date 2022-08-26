@@ -11,8 +11,7 @@ from .elf2dol import elf_to_dol
 from .elf2rel import RelLinker
 from .fileutil import (dump_to_pickle, load_from_pickle, dump_to_yaml, load_from_yaml,
                        dump_to_json_str)
-from .forceactivegen import apply_forceactive
-from .forcefilesgen import apply_forcefiles
+from .lcf import apply_forceactive, apply_forcefiles
 from .orderfloats import order_floats
 from .orderstrings import order_strings
 from .progress import calc_progress_info
