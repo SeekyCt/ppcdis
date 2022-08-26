@@ -12,8 +12,7 @@ from .elf2rel import RelLinker
 from .fileutil import (dump_to_pickle, load_from_pickle, dump_to_yaml, load_from_yaml,
                        dump_to_json_str)
 from .lcf import apply_forceactive, apply_forcefiles
-from .orderfloats import order_floats
-from .orderstrings import order_strings
+from .orderdata import order_floats, order_strings
 from .progress import calc_progress_info
 from .relextern import dump_rel_externs, get_rel_externs
 from .slices import (Slice, Source, SourceDesc, load_slice_yaml, fill_sections, order_sources,
