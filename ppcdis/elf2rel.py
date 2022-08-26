@@ -219,7 +219,7 @@ class RelLinker:
                 
             # Make runtime relocation if still needed
             if not skip_runtime:
-                if t in (RelType.ADDR32, RelType.ADDR16_LO, RelType.ADDR16_HA, RelType.REL24):
+                if t in (RelType.ADDR32, RelType.ADDR16_LO, RelType.ADDR16_HA, RelType.REL24, RelType.REL14):
                     relocs.append(RelReloc(
                         target_module, offs, t, target_section, target_offset
                     ))
