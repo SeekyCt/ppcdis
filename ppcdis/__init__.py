@@ -1,7 +1,6 @@
 from .analyser import Analyser
 from .disassembler import Disassembler
-from .assetinc import format_bytes
-from .assetrip import rip_asset
+from .assets import format_bytes, rip_asset
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydiff import diff_relocs, diff_secs
 from .binarydol import DolReader
