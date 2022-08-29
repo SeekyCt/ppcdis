@@ -234,9 +234,6 @@ class BinaryReader(ABC):
     def read(self, addr: int, size: int, is_offset=False) -> bytes:
         """Reads bytes from an address"""
         
-        if not is_offset:
-            assert self.addr_is_local(addr), f"External binaries should not be read ({addr:x})"
-        
         # Convert to offset
         if is_offset:
             offs = addr
