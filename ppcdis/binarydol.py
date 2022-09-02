@@ -2,20 +2,10 @@
 Binary reader for DOL files
 """
 
-from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from .binarybase import BinaryReader, BinarySection, SectionType
+from .binarybase import BinaryReader, BinarySection, SectionDef, SectionType
 from .fileutil import load_from_yaml_str
-
-@dataclass
-class DolSectionDef:
-    """Container used for external code to define sections"""
-
-    name: str
-    attr: str = None
-    nobits: bool = False
-    balign: int = None
 
 default_section_defs = load_from_yaml_str("""
 text:
@@ -59,14 +49,10 @@ class DolReader(BinaryReader):
         self._section_defs_raw = section_defs
         if section_defs is None:
             section_defs = default_section_defs
-        parse = lambda defs: [
-            DolSectionDef(name, **(dat if dat is not None else {}))
-            for name, dat in defs.items()
-        ]
         self._section_defs = [
-            parse(section_defs["text"]),
-            parse(section_defs["data"]),
-            parse(section_defs["bss"])
+            SectionDef.parse(section_defs["text"]),
+            SectionDef.parse(section_defs["data"]),
+            SectionDef.parse(section_defs["bss"])
         ]
         self.r13 = r13
         self.r2 = r2

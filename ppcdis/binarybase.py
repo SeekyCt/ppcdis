@@ -9,7 +9,7 @@ from enum import Enum, unique
 from hashlib import sha1
 import os
 from struct import unpack
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 # Dummy offset used to indicate a read from a bss section
 OFFS_BSS = -1
@@ -21,6 +21,21 @@ class SectionType(Enum):
     TEXT = 0
     DATA = 1
     BSS = 2 # not included in binary
+
+@dataclass
+class SectionDef:
+    """Section property definitions container"""
+
+    name: str
+    attr: str = None
+    nobits: bool = False
+    balign: int = None
+
+    def parse(defs: Dict):
+        return [
+            SectionDef(name, **(dat if dat is not None else {}))
+            for name, dat in defs.items()
+        ]
 
 @dataclass
 class BinarySection:

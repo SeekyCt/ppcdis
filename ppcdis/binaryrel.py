@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple
 
 from ppcdis.fileutil import load_from_yaml_str
 
-from .binarybase import BinaryReader, BinarySection, SectionType
+from .binarybase import BinaryReader, BinarySection, SectionDef, SectionType
 from .binarydol import DolReader
 
 @unique
@@ -120,14 +120,10 @@ class RelReader(BinaryReader):
         self._section_defs_raw = section_defs
         if section_defs is None:
             section_defs = default_section_defs
-        parse = lambda defs: [
-            RelSectionDef(name, **(dat if dat is not None else {}))
-            for name, dat in defs.items()
-        ]
         self._section_defs = [
-            parse(section_defs["text"]),
-            parse(section_defs["data"]),
-            parse(section_defs["bss"])
+            SectionDef.parse(section_defs["text"]),
+            SectionDef.parse(section_defs["data"]),
+            SectionDef.parse(section_defs["bss"])
         ]
 
         # Keep an internal map of the sections including the empty ones (for reloc indices)
