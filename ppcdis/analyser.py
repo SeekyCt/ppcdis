@@ -256,7 +256,7 @@ class Reloc:
 
     t: RelocType
     target: int
-    offs: int # TODO: offset of another symbol for GCC jumptables
+    offs: int
 
     def format_offs(self) -> str:
         """Gets the text representation of the offset"""
@@ -527,7 +527,6 @@ class Analyser:
         
         # Get base address
         if isinstance(self._bin, LECTReader):
-            # TODO: make these public
             b = self._bin.rel.dol
             sda_base = b.r2 if reg == PPC_REG_R2 else b.r13
         else:
