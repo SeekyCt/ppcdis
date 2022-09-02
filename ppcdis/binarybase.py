@@ -31,11 +31,19 @@ class SectionDef:
     nobits: bool = False
     balign: int = None
 
-    def parse(defs: Dict):
-        return [
-            SectionDef(name, **(dat if dat is not None else {}))
-            for name, dat in defs.items()
-        ]
+    def parse(defs):
+        if isinstance(defs, Dict):
+            print("Warning: the dict section_defs syntax is deprecated")
+            return [
+                SectionDef(name, **(dat if dat is not None else {}))
+                for name, dat in defs.items()
+            ]
+        else:
+            return [
+                SectionDef(**(d))
+                for d in defs
+            ]
+
 
 @dataclass
 class BinarySection:

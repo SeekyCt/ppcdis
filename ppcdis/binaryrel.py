@@ -98,16 +98,21 @@ class RelSectionDef:
 
 default_section_defs = load_from_yaml_str("""
 text:
-    .text:
+  - name: .text
+
 data:
-    .ctors:
-        balign: 0
-    .dtors:
-        balign: 0
-    .rodata:
-    .data:
+  - name: .ctors
+    balign: 0
+
+  - name: .dtors
+    balign: 0
+
+  - name: .rodata
+
+  - name: .data
+
 bss:
-    .bss:
+  - name: .bss
 """)
 
 class RelReader(BinaryReader):

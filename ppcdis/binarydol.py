@@ -9,25 +9,37 @@ from .fileutil import load_from_yaml_str
 
 default_section_defs = load_from_yaml_str("""
 text:
-    .init:
-    .text:
+  - name: .init
+
+  - name: .text
+
 data:
-    extab_:
-        attr: a
-    extabindex_:
-        attr: a
-    .ctors:
-        balign: 0
-    .dtors:
-        balign: 0
-    .rodata:
-    .data:
-    .sdata:
-    .sdata2:
+  - name: extab_
+    attr: a
+
+  - name: extabindex_
+    attr: a
+
+  - name: .ctors
+    balign: 0
+
+  - name: .dtors
+    balign: 0
+
+  - name: .rodata
+
+  - name: .data
+
+  - name: .sdata
+
+  - name: .sdata2
+
 bss:
-    .bss:
-    .sbss:
-    .sbss2:
+  - name: .bss
+
+  - name: .sbss
+
+  - name: .sbss2
 """)
 
 TEXT_COUNT = 7
