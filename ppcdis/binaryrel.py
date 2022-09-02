@@ -86,16 +86,6 @@ class RelBinarySection(BinarySection):
         super().__init__(*parent_args)
         self.rel_idx = rel_idx
 
-# TODO: this can probably just be merged with DolSectionDef
-@dataclass
-class RelSectionDef:
-    """Container used for external code to define sections"""
-
-    name: str
-    attr: str = None
-    nobits: bool = False
-    balign: int = None
-
 default_section_defs = load_from_yaml_str("""
 text:
   - name: .text
