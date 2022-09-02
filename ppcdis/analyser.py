@@ -612,15 +612,23 @@ class Analyser:
                 self._analyse_data(p, self._bin.read_word(p))
         else: # section.type == SectionType.BSS:
             pass
+    
+    def _read_jt_target(self, jt_addr: int, offs: int) -> int:
+        """Reads the target address of a jumptable entry"""
 
-    def _jump_table_bound_esitmate(self, func_start: int, func_end: int, jt_addr) -> \
-                                                                  Tuple[Set[int], int]:
+        if isinstance(self._bin, LECTReader):
+            return jt_addr + self._bin.read_word(jt_addr + offs, signed=True)
+        else:
+            return self._bin.read_word(jt_addr + offs)
+
+    def _jump_table_bound_esitmate(self, func_start: int, func_end: int, jt_addr: int
+                                  ) -> Tuple[Set[int], int]:
         """Returns the destinations and potential max size of a jumptable"""
 
         offs = 0
         dests = set()
         while True:
-            jump = self._bin.read_word(jt_addr + offs)
+            jump = self._read_jt_target(jt_addr, offs)            
 
             # Check if jump destination is valid and no other label splits the table here
             if (jump < func_start or jump >= func_end or
@@ -654,6 +662,7 @@ class Analyser:
             jumptables: jtbl_ptrs, jtbl_loads and jtbl_ctr when reaching this address
                 jtbl_ptrs maps registers to the jumptable they point to
                 jtbl_loads maps registers to the jumptables they contain jump destinations from
+                jtbl_adds does the same but for gcc with the offset applied
                 jtbl_ctr stores the jumptable the count register has loaded its destination from
             changed_r13: whether r13 has been changed when reaching this address
             changed_r2: whether r2 has been changed when reaching this address
@@ -668,9 +677,10 @@ class Analyser:
         if jumptables is None:
             jtbl_ptrs = {}
             jtbl_loads = {}
+            jtbl_adds = {}
             jtbl_ctr = None
         else:
-            jtbl_ptrs, jtbl_loads, jtbl_ctr = jumptables
+            jtbl_ptrs, jtbl_loads, jtbl_adds, jtbl_ctr = jumptables
 
         # Debug print
         def tprint(*varargs):
@@ -697,6 +707,7 @@ class Analyser:
             # Flags to prevent jumptable info being overwritten
             first_jt_ptr_ins = False
             first_jt_load_ins = False
+            first_jt_add_ins = False
 
             # Update SDA overrides
             if ((instr.id in lowerInsns or instr.id in storeLoadInsns)
@@ -751,16 +762,12 @@ class Analyser:
                     # Update upper half
                     upper.notify_lower(addr, offs, algebraic)
                     
-                    # Codewarrior jumptable heuristic stage 1 - check for an array of pointers to
-                    #                                           inside this function
-                    # TODO: support GCC
-                    # Assumes minimum size is 3 (real minimum might be 4?)
+                    # Jumptable heuristic stage 1 - check for an array of pointers to inside this
+                    # function. 3 is used as the minimum length to be safe, though the actual CW 
+                    # minimum seems to be 4, and the GCC minimum seems to be 5
                     if instr.id == PPC_INS_ADDI and self._bin.addr_is_local(sym_addr):
                         for i in range(0, 3*4, 4):
-                            # Check for at least 3 pointers to further ahead in this function
-                            # Ignore known false positives
-                            # TODO: individual jump table override?
-                            ptr = self._bin.read_word(sym_addr + i)
+                            ptr = self._read_jt_target(sym_addr, i)
                             if (not (func_start <= ptr < func_end) or
                                 self._ovr.is_blocked(sym_addr + i, ptr)):
                                 break
@@ -770,21 +777,42 @@ class Analyser:
                             first_jt_ptr_ins = True
                             # tprint(f"Start tracking jumptable {sym_addr:x} from {addr:x}")
 
-            # Codewarrior jumptable heuristic stage 2 - check for a lwzx on the jumptable
+            # Jumptable heuristic stage 2 - check for a lwzx on the jumptable
+            # TODO: check operands[2]?
             if instr.id == PPC_INS_LWZX and instr.operands[1].reg in jtbl_ptrs:
                 dest_reg = instr.operands[0].reg
                 src_reg = instr.operands[1].reg
 
-                first_jt_load_ins = True
-
-                # Start mtctr tracking
-                jtbl_loads[dest_reg] = jtbl_ptrs[src_reg]
+                if isinstance(self._bin, LECTReader):
+                    # Start add tracking
+                    first_jt_add_ins = True
+                    jtbl_adds[dest_reg] = jtbl_ptrs[src_reg]
+                    # tprint(f"Jumptable {jtbl_adds[dest_reg]:x} to stage 2 at {addr:x}")
+                else:
+                    # Start mtctr tracking
+                    first_jt_load_ins = True
+                    jtbl_loads[dest_reg] = jtbl_ptrs[src_reg]
+                    # tprint(f"Jumptable {jtbl_loads[dest_reg]:x} to stage 2 at {addr:x}")
 
                 # Jumptable pointers are only used once
+                # TODO: is that true on GCC?
                 del jtbl_ptrs[src_reg]
-                # tprint(f"Jumptable {jtbl_loads[dest_reg]:x} to stage 2 at {addr:x}")
+            
+            # Jumptable heuristic stage 3 (gcc only) - check for an add on the jumptable
+            # TODO: check operands[2]?
+            if instr.id == PPC_INS_ADD and instr.operands[1].reg in jtbl_adds:
+                dest_reg = instr.operands[0].reg
+                src_reg = instr.operands[1].reg
 
-            # Codewarrior jumptable heuristic stage 3 - check for a mtctr on the jumptable
+                first_jt_load_ins = True
+                jtbl_loads[dest_reg] = jtbl_adds[src_reg]
+
+                # Jumptable pointers are only used once
+                del jtbl_adds[src_reg]
+
+                # tprint(f"Jumptable {jtbl_loads[dest_reg]:x} to stage 3 at {addr:x}")
+
+            # Jumptable heuristic stage 4 - check for a mtctr on the jumptable
             # (even old CW versions don't use the lr for switches)
             if instr.id == PPC_INS_MTCTR:
                 if instr.operands[0].reg in jtbl_loads:
@@ -802,13 +830,13 @@ class Analyser:
                     # tprint(f"Jumptable {jtbl_ctr:x} destroyed by mctr at {addr:x}")
                     jtbl_ctr = None
 
-            # Final codewarrior jumptable heuristic stage - bctr from the jumptable
+            # Final jumptable heuristic stage - bctr from the jumptable
             if instr.id == PPC_INS_BCTR and jtbl_ctr is not None:
                 # tprint(f"Queuing jumptable {jtbl_ctr:x}")
 
                 # Save context and queue for later
                 # Processing later allows for back-to-back jumptables to be split more easily
-                jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), None)
+                jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), jtbl_adds.copy(), None)
                 self._jt[jtbl_ctr] = (section, addr, uppers.copy(), visited.copy(),
                                         jumptables_copy, changed_r13, changed_r2)
 
@@ -835,6 +863,9 @@ class Analyser:
                 if reg in jtbl_loads and not first_jt_load_ins:
                     # tprint(f"Destroyed JT guess load {instr.reg_name(reg)} at {addr:x}")
                     del jtbl_loads[reg]
+                if reg in jtbl_adds and not first_jt_add_ins:
+                    # tprint(f"Destroyed JT guess add {instr.reg_name(reg)} at {addr:x}")
+                    del jtbl_adds[reg]
 
             # Track new upper references 
             # Thorough disables having multiple at once, since it can miss lowers in cases like:
@@ -907,7 +938,7 @@ class Analyser:
 
                 # Follow branch with copy of context
                 # tprint(f"Follow {addr:x}->{dest:x}")
-                jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), jtbl_ctr)
+                jumptables_copy = (jtbl_ptrs.copy(), jtbl_loads.copy(), jtbl_adds.copy(), jtbl_ctr)
                 self._follow_values(section, dis, dest, func_start, func_end, queue, uppers.copy(),
                                     visited, jumptables_copy, changed_r13, changed_r2, indent + 1)
 
@@ -1002,7 +1033,7 @@ class Analyser:
                     # Follow flow through all cases
                     jt = self._jt_guide[addr]
                     size = self._rlc.get_jump_table_size(jt)
-                    dests = set(self._bin.read_word(p) for p in range(jt, jt + size, 4))
+                    dests = set(self._read_jt_target(jt, i) for i in range(0, size, 4))
                     for dest in dests:
                         self._follow_flow(dis, dest, start, end, is_init, visited, indent+1)
                 else:
@@ -1059,7 +1090,7 @@ class Analyser:
                 offs = 0
                 visited_dests = set()
                 while offs < max_size:
-                    dest = self._bin.read_word(jt + offs)
+                    dest = self._read_jt_target(jt, offs)
 
                     # Skip duplicates
                     if dest not in visited_dests:
@@ -1067,7 +1098,8 @@ class Analyser:
                         self._lab.notify_tag(dest, LabelTag.JUMP)
 
                         # Follow uppers through jump
-                        jumptables_copy = (jumptables[0].copy(), jumptables[1].copy(), None)
+                        jumptables_copy = (jumptables[0].copy(), jumptables[1].copy(),
+                                           jumptables[2].copy(), None)
                         self._follow_values(section, self._disasm[section.name], dest, func_start,
                                             func_end, [], uppers.copy(), visited.copy(),
                                             jumptables_copy, changed_r13, changed_r2)

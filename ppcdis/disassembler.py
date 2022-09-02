@@ -67,7 +67,7 @@ class RelocGetter:
 
         # Parse jump tables
         self._jt_sizes = {}
-        self._jt = set()
+        self._jt = {}
         for addr, jt in dat["jumptables"].items():
             # Save size
             self._jt_sizes[addr] = jt["size"]
@@ -78,7 +78,7 @@ class RelocGetter:
             # Update dicts
             for i, target in enumerate(entries):
                 # Create reloc for jump table entry
-                self._jt.add(addr + i * 4)
+                self._jt[addr + i * 4] = addr
 
                 # Create target label
                 sym.notify_jt_target(target)
@@ -97,6 +97,11 @@ class RelocGetter:
         """Returns whether an address is in a jump table"""
 
         return addr in self._jt
+    
+    def get_containing_jumptable(self, addr: int) -> int:
+        """Returns the address of the jumptable containing an address"""
+
+        return self._jt[addr]
 
     def get_referencing_jumptables(self, start: int, end: int) -> List[int]:
         """Gets the jumptables referencing a function"""
@@ -405,8 +410,14 @@ class Disassembler:
         ops = f"0x{val.hex()}"
         if enable_ref:
             if self._rlc.check_jt_at(addr):
-                target = int.from_bytes(val, 'big')
-                ops = f"jump_{target:x}"
+                if isinstance(self._bin, LECTReader):
+                    target = int.from_bytes(val, 'big', signed=True)
+                    jt = self._rlc.get_containing_jumptable(addr)
+                    target += jt
+                    ops = f"jump_{target:x} - jtbl_{jt:x}"
+                else:
+                    target = int.from_bytes(val, 'big')
+                    ops = f"jump_{target:x}"
             else:
                 ref = self._rlc.get_reference_at(addr)
                 if ref is not None:
