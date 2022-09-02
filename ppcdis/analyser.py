@@ -956,7 +956,6 @@ class Analyser:
             instr = dis[addr]
 
             # Skip dummy instructions
-            # TODO: are any of these branches?
             if isinstance(instr, DummyInstr):
                 addr += 4
                 continue            
