@@ -127,7 +127,6 @@ class RelLinker:
         sym = self.symbols_id[sym_id]
 
         # Find symbol location
-        # TODO: support other rels?
         sec = sym.st_shndx
         if sec == SHN_UNDEF:
             # Symbol in symdef, dol, or other rel
