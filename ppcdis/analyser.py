@@ -945,10 +945,8 @@ class Analyser:
             # Thorough won't ever find another upper, terminate early if jumptables and r2/r13
             # overrides are done too
             if (self._thorough and
-                len(uppers) == len(jtbl_loads) == len(jtbl_ptrs) == 0 and
-                jtbl_ctr is None and
-                not (changed_r2 or changed_r13)
-                ):
+                len(uppers) == len(jtbl_loads) == len(jtbl_adds) == len(jtbl_ptrs) == 0 and
+                jtbl_ctr is None and not (changed_r2 or changed_r13)):
                 # tprint(f"Thorough scan finished at {addr:x}")
                 break
 
