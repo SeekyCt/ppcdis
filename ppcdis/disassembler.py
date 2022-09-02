@@ -10,6 +10,8 @@ from typing import Dict, List, Set, Tuple
 import capstone
 from capstone.ppc import *
 
+from ppcdis.binarylect import LECTReader
+
 from .analyser import Reloc, RelocType
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .csutil import DummyInstr, sign_half, cs_disasm 
@@ -351,22 +353,15 @@ class Disassembler:
             if ref.t == RelocType.NORMAL:
                 rel = '@l'
             else:
-                # TODO: bring back in some form when adding GCC, useless for now
-                """
-                # Check if actual relocation can be used
-                if self._bin.addr_is_local(ref.target):
+                assert reg in (PPC_REG_R13, PPC_REG_R2), f"Bad reloc {instr.address:x} -> {ref}"
+                if isinstance(self._bin, LECTReader):
+                    rel = "-_SDA2_BASE_" if reg == PPC_REG_R2 else "-_SDA_BASE_"
+                else:
+                    assert self._bin.addr_is_local(ref.target), f"SDA reference outside of binary " \
+                        f"at {instr.address:x} with {ref} (probably code with r2 overwritten, " \
+                        f"if so then add a blocked_pointers override for 0x{instr.address:x})"
                     rel = '@sda21'
                     reg_name = "0"
-                else:
-                    rel = "-_SDA2_BASE_" if reg == PPC_REG_R2 else "-_SDA_BASE_"
-                    self._external_sda = True
-                """
-                assert self._bin.addr_is_local(ref.target), f"SDA reference outside of binary " \
-                    f"at {instr.address:x} with {ref} (probably code with r2 overwritten, " \
-                    f"if so then add a blocked_pointers override for 0x{instr.address:x})"
-                rel = '@sda21'
-                reg_name = "0"
-                assert reg in (PPC_REG_R13, PPC_REG_R2), f"Bad reloc {instr.address:x} -> {ref}"
 
             # Update operands
             if instr.id in storeLoadInsns:

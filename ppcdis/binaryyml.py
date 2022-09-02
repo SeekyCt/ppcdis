@@ -4,6 +4,8 @@ Loader for a binary from a yml
 
 from typing import Dict
 
+from ppcdis.binarylect import LECTReader
+
 from .binarybase import BinaryReader
 from .binarydol import DolReader
 from .binaryrel import RelReader
@@ -77,6 +79,14 @@ def load_binary_yml(path: str) -> BinaryReader:
                         label_prefix, data_prefix)
     elif binary_type == "rel":
         ret = load_rel_yml(binary_path, func_prefix, label_prefix, data_prefix, yml)
+    elif binary_type == "lect":
+        rel_path = yml.get("rel")
+        if rel_path is not None:
+            rel = load_binary_yml(rel_path)
+        else:
+            rel = None
+        ret = LECTReader(rel, binary_path, yml["section_defs"], func_prefix, label_prefix,
+                         data_prefix)
     else:
         assert 0, f"Unknown binary type {binary_type}"
     

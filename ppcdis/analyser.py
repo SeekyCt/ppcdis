@@ -11,6 +11,8 @@ from typing import Dict, List, Set, Tuple
 from capstone import CsInsn
 from capstone.ppc import *
 
+from ppcdis.binarylect import LECTReader
+
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydol import DolReader
 from .csutil import DummyInstr, check_overwrites, cs_disasm, sign_half
@@ -496,8 +498,13 @@ class Analyser:
             return
         
         # Get base address
-        assert isinstance(self._bin, DolReader), f"SDA access outside of dol at {instr.address:x}"
-        sda_base = self._bin.r2 if reg == PPC_REG_R2 else self._bin.r13
+        if isinstance(self._bin, LECTReader):
+            # TODO: make these public
+            b = self._bin._rel._dol
+            sda_base = b.r2 if reg == PPC_REG_R2 else b.r13
+        else:
+            assert isinstance(self._bin, DolReader), f"SDA access outside of dol at {instr.address:x}"
+            sda_base = self._bin.r2 if reg == PPC_REG_R2 else self._bin.r13
         
         # Get offset
         if instr.id in storeLoadInsns:
