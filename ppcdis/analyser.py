@@ -395,22 +395,54 @@ class Analyser:
         self._ovr = AnalysisOverrideManager(overrides_path)
         self._lab = Labeller(binary, self._ovr, extra_label_paths)
         self._rlc = Relocator()
-        self._follow = defaultdict(list) # per section queues of instructions to follow the values
-                                         # from (either upper references or r13/r2 overrides)
-        self._disasm = {} # maps addresses to their capstone instructions
-        self._branches = defaultdict(list) # per section queues of tail calls to double check
-        self._jt = {} # queue for after second pass, maps bctr addresses to their context backups
-        self._sda = {} # queue for after second pass, maps r2/r13 use addresses to their targets
 
-        self._jt_guide = {} # backup for control flow pass, maps bctr addresses to their jumptables
+        self._disasm = {} # maps addresses to their capstone instructions
+
+        self._follow = defaultdict(list) # per section queues of instructions for
+                                         # _postprocess_section_follows (upper references or r13/r2
+                                         # overrides)
+        self._branches = defaultdict(list) # per section queues of tail calls to check
+        self._jt = {} # queue of jumptables to check, maps bctr addresses to their context backups
+        self._sda = {} # queue of sda references to check, maps r2/r13 use addresses to their targets
+        self._jt_guide = {} # backup for _postprocess_control_flow, maps bctr addresses to their jumptables
 
         # Tag entry points as bl targets
         for addr, _ in self._bin.get_entries():
             self._lab.notify_tag(addr, LabelTag.CALL)
 
         # Analyse
-        self._first_pass()
-        self._second_pass()
+
+        # Pre-disassemble text sections
+        for sec in self._bin.sections:
+            if sec.type != SectionType.TEXT:
+                continue
+            self._print(f"Disassemble {sec.name}")
+            self._disasm_section(sec)
+        
+        # Analyse sections
+        for sec in self._bin.sections:
+            self._print(f"Initial analysis of {sec.name}")
+            self._analyse_section(sec)
+
+        # Follow upper references
+        for section in self._bin.sections:
+            self._postprocess_section_follows(section)
+        
+        # Go back to jumptables now that they might be split better
+        self._postprocess_jumptables()
+
+        # Add SDA relocations now that all uppers are followed to confirm false positives
+        self._postprocess_sda()
+
+        # Trust function pointers now for function boundary calculation
+        self._lab.commit_pointed_functions()
+
+        # Check for tail calls now functions are better known
+        self._postprocess_branches()
+
+        # Check for unreferenced functions
+        for section in self._bin.sections:
+            self._postprocess_control_flow(section)
 
     def _print(self, msg: str):
         """Prints a message if not in quiet mode"""
@@ -426,12 +458,8 @@ class Analyser:
         self._print("Output relocations and jumptables")
         self._rlc.output(relocs_path)
 
-    ##############
-    # First Pass #
-    ##############
-
     def _process_labelled_branch(self, instr: CsInsn) -> str:
-        """Labels branch destinations in the first pass"""
+        """Labels branch destinations"""
 
         # Get branch destination
         dest = instr.operands[-1].imm
@@ -474,7 +502,7 @@ class Analyser:
         self._lab.notify_tag(dest, tag)
 
     def _process_upper(self, instr: CsInsn):
-        """Queues potential @h/@ha operands in the first pass"""
+        """Queues potential @h/@ha operands to be followed"""
 
         # Cancel if not part of a reference
         if not 0x8000 <= instr.operands[1].imm <= 0x817f:
@@ -485,7 +513,7 @@ class Analyser:
         self._follow[sec_name].append(instr.address)
 
     def _process_sda(self, instr: CsInsn) -> Tuple[str, List[int]]:
-        """Handles @sda21 operands"""
+        """Queues potential @sda21 operands"""
 
         # Get source register
         if instr.id in storeLoadInsns:
@@ -517,7 +545,7 @@ class Analyser:
             self._sda[instr.address] = sda_base + offs
     
     def _process_sda_override(self, instr: CsInsn):
-        """Handles r13/r2 overwrites"""
+        """Queues r13/r2 overwrites to be followed"""
 
         # Check if overwriting
         ovr = check_overwrites(instr)
@@ -527,10 +555,12 @@ class Analyser:
             self._follow[sec_name].append(instr.address)
     
     def _analyse_instr(self, instr: CsInsn):
-        """Processes an instruction in the first pass"""
+        """Processes an instruction"""
 
         if isinstance(instr, DummyInstr):
             return
+        
+        # TODO: move these checks into the functions
 
         if instr.id in labelledBranchInsns:
             self._process_labelled_branch(instr)
@@ -544,7 +574,7 @@ class Analyser:
         self._process_sda_override(instr)
     
     def _analyse_data(self, addr: int, val: int):
-        """Processes a word of data in the first pass"""
+        """Processes a word of data"""
         
         # Treat as pointer if it's to a valid address
         if self._bin.validate_addr(val) and not self._ovr.is_blocked(addr, val):
@@ -573,7 +603,7 @@ class Analyser:
         self._disasm[sec.name] = lines
 
     def _analyse_section(self, sec: BinarySection):
-        """Analyses the contents of the section for the first pass"""
+        """Analyses the contents of a section"""
 
         if sec.type == SectionType.TEXT:
             for _, instr in self._disasm[sec.name].items():
@@ -583,23 +613,6 @@ class Analyser:
                 self._analyse_data(p, self._bin.read_word(p))
         else: # section.type == SectionType.BSS:
             pass
-
-    def _first_pass(self):
-        """Completes the first analysis pass of all sections"""
-
-        self._print("== First Pass ==")
-        for sec in self._bin.sections:
-            if sec.type != SectionType.TEXT:
-                continue
-            self._print(f"Disassemble {sec.name}")
-            self._disasm_section(sec)
-        for sec in self._bin.sections:
-            self._print(f"Initial pass of {sec.name}")
-            self._analyse_section(sec)
-
-    ###############
-    # Second Pass #
-    ###############
 
     def _jump_table_bound_esitmate(self, func_start: int, func_end: int, jt_addr) -> \
                                                                   Tuple[Set[int], int]:
@@ -1146,28 +1159,3 @@ class Analyser:
             # Create a new function at position if expected bound not reached
             if addr != end:
                 self._lab.notify_tag(addr, LabelTag.CALL)
-
-    def _second_pass(self):
-        """Completes the second analysis pass on all text sections"""
-
-        self._print("== Second Pass ==")
-
-        # Follow upper references first
-        for section in self._bin.sections:
-            self._postprocess_section_follows(section)
-        
-        # Go back to jumptables now that they might be split better
-        self._postprocess_jumptables()
-
-        # Add SDA relocations now that all uppers are followed to confirm false positives
-        self._postprocess_sda()
-
-        # Trust function pointers now for function boundary calculation
-        self._lab.commit_pointed_functions()
-
-        # Check for tail calls now functions are better known
-        self._postprocess_branches()
-
-        # Check for unreferenced functions
-        for section in self._bin.sections:
-            self._postprocess_control_flow(section)
