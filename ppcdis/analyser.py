@@ -366,7 +366,7 @@ class UpperHandler:
 
         # Shift if targetting somewhere before previous target
         if target < self._target:
-            shift = target - self._target
+            shift = self._target - target
             self._target = target
 
             # Update upper
