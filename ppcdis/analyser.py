@@ -500,7 +500,7 @@ class Analyser:
         # Get base address
         if isinstance(self._bin, LECTReader):
             # TODO: make these public
-            b = self._bin._rel._dol
+            b = self._bin.rel.dol
             sda_base = b.r2 if reg == PPC_REG_R2 else b.r13
         else:
             assert isinstance(self._bin, DolReader), f"SDA access outside of dol at {instr.address:x}"

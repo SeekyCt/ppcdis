@@ -109,7 +109,7 @@ class RelReader(BinaryReader):
     def __init__(self, dol: DolReader, path: str, base_addr: int, bss_addr: int,
                  section_defs: Dict, func_prefix: str, label_prefix: str, data_prefix: str):
         # Handle params
-        self._dol = dol
+        self.dol = dol
         self._base_addr = base_addr
         self._bss_addr = bss_addr
         self._section_defs_raw = section_defs
@@ -339,8 +339,8 @@ class RelReader(BinaryReader):
     def _get_external_binaries(self) -> List[BinaryReader]:
         """Returns the external dol if given"""
 
-        if self._dol is not None:
-            return [self._dol]
+        if self.dol is not None:
+            return [self.dol]
         else:
             return []
     
@@ -358,7 +358,7 @@ class RelReader(BinaryReader):
     def load_other(self, path: str) -> "RelReader":
         """Loads another binary of the same type with the same settings"""
 
-        return RelReader(self._dol, path, self._base_addr, self._bss_addr, self._section_defs_raw,
+        return RelReader(self.dol, path, self._base_addr, self._bss_addr, self._section_defs_raw,
                          self.func_prefix, self.label_prefix, self.data_prefix)
     
     def get_reloc_target(self, reloc: RelReloc) -> int:

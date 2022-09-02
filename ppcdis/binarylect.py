@@ -28,7 +28,7 @@ class LECTReader(BinaryReader):
     def __init__(self, rel: RelReader, path: str, section_defs: Dict, func_prefix: str,
                  label_prefix: str, data_prefix: str):
         # Handle params
-        self._rel = rel
+        self.rel = rel
         self._section_defs_raw = section_defs
         self._section_defs = LECTSectionDef.parse(section_defs)
 
@@ -60,13 +60,13 @@ class LECTReader(BinaryReader):
     def _get_external_binaries(self) -> List[BinaryReader]:
         """Returns the external dol if given"""
 
-        if self._rel is not None:
-            return [self._rel] + self._rel._externs
+        if self.rel is not None:
+            return [self.rel] + self.rel._externs
         else:
             return []
     
     def load_other(self, path: str) -> "LECTReader":
         """Loads another binary of the same type with the same settings"""
 
-        return LECTReader(self._rel, path, self._section_defs_raw, self.func_prefix,
+        return LECTReader(self.rel, path, self._section_defs_raw, self.func_prefix,
                           self.label_prefix, self.data_prefix)
