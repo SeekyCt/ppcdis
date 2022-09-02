@@ -541,7 +541,7 @@ class Disassembler:
         )
     
     def function_to_text_with_referenced(
-        self, addr: int, inline=False, extra=False, hashable=False, declare_mangled=True
+        self, addr: int, inline=False, extra=False, hashable=False, declare_mangled=False
     ) -> Tuple[str, Set[Tuple[int, str]]]:
         """Outputs the disassembly of a single function to text, and all addresses it referenced
         
@@ -613,7 +613,7 @@ class Disassembler:
         return '\n'.join(ret), None if referenced is None else referenced.get_referenced()
     
     def function_to_text(self, addr: int, inline=False, extra=False, hashable=False,
-                         declare_mangled=True) -> str:
+                         declare_mangled=False) -> str:
         """Outputs the disassembly of a single function to text
         
         Inline changes the output to CW inline asm syntax
