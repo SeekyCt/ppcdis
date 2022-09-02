@@ -270,25 +270,25 @@ class BinaryReader(ABC):
         else:
             return bytes(size)
 
-    def read_int(self, addr: int, size: int, is_offset=False) -> int:
+    def read_int(self, addr: int, size: int, is_offset=False, signed=False) -> int:
         """Reads an integer at an address"""
 
-        return int.from_bytes(self.read(addr, size, is_offset), "big")
+        return int.from_bytes(self.read(addr, size, is_offset), "big", signed=signed)
 
-    def read_byte(self, addr: int, is_offset=False) -> int:
+    def read_byte(self, addr: int, is_offset=False, signed=False) -> int:
         """Reads a byte at an address"""
 
-        return self.read_int(addr, 1, is_offset)
+        return self.read_int(addr, 1, is_offset, signed)
 
-    def read_half(self, addr: int, is_offset=False) -> int:
+    def read_half(self, addr: int, is_offset=False, signed=False) -> int:
         """Reads a halfword at an address"""
 
-        return self.read_int(addr, 2, is_offset)
+        return self.read_int(addr, 2, is_offset, signed)
 
-    def read_word(self, addr: int, is_offset=False) -> int:
+    def read_word(self, addr: int, is_offset=False, signed=False) -> int:
         """Reads a word at an address"""
 
-        return self.read_int(addr, 4, is_offset)
+        return self.read_int(addr, 4, is_offset, signed)
     
     def read_word_array(self, addr: int, length: int, is_offset=False) -> List[int]:
         """Reads a word array at an address"""
