@@ -31,16 +31,17 @@ class SectionDef:
     nobits: bool = False
     balign: int = None
 
-    def parse(defs):
+    @classmethod
+    def parse(cls, defs):
         if isinstance(defs, Dict):
             print("Warning: the dict section_defs syntax is deprecated")
             return [
-                SectionDef(name, **(dat if dat is not None else {}))
+                cls(name, **(dat if dat is not None else {}))
                 for name, dat in defs.items()
             ]
         else:
             return [
-                SectionDef(**(d))
+                cls(**(d))
                 for d in defs
             ]
 
