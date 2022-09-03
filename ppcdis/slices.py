@@ -6,7 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
-from .binarybase import BinarySection
+from .binarybase import BinaryReader, BinarySection
 from .fileutil import load_from_yaml
 from .symbols import LabelManager, LabelType
 
@@ -179,38 +179,26 @@ def find_containing_source(sources: List[Source], addr: int) -> str:
     # Not found
     return None
 
-def calc_progress_info(sec: BinarySection, sources: List[Source], labels_path: str
-                      ) -> Tuple[int, int, int]:
-    """Calculates decompiled slices size, total section size, and all symbol sizes for a section"""
+def calc_progress_info(binary: BinaryReader, sources: List[Source], labels_path: str
+                      ) -> Tuple[Dict[str, int], Dict[str, int], int]:
+    """Calculates decompiled slices size, total section size, and all symbol sizes for each section"""
 
     # Load labels pickle
     labels = LabelManager(labels_path)
 
     # Add slice sizes
-    decomp_slices_size = 0
-    total_size = 0
+    decomp_slices_sizes = defaultdict(lambda: 0)
+    total_sizes = defaultdict(lambda: 0)
     for source in sources:
-        # Try get slice in section
-        sl = source.slices.get(sec.name)
-        if sl is None:
-            continue
-
-        # Add size
-        size = sl.end - sl.start
-        total_size += size
-        if source.source is not None:
-            decomp_slices_size += size
+        for sec_name, sl in source.slices.items():
+            # Add size
+            size = sl.end - sl.start
+            total_sizes[sec_name] += size
+            if source.source is not None:
+                decomp_slices_sizes[sec_name] += size
 
     # Get symbol sizes
-    syms = sorted(
-        [
-            addr for addr, t in labels.get_types()
-            if t != LabelType.LABEL and sec.contains_addr(addr)
-        ] + [sec.addr + sec.size]
-    )
-    sizes = {
-        f"{sym:x}" : syms[i + 1] - sym
-        for i, sym in enumerate(syms[:-1])
-    }
+    labels.init_size_calculation(binary)
+    symbol_sizes = labels.get_sizes()
 
-    return decomp_slices_size, total_size, sizes
+    return decomp_slices_sizes, total_sizes, symbol_sizes

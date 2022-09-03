@@ -2,7 +2,7 @@
 Helpers for address naming
 """
 
-from bisect import bisect
+from bisect import bisect, bisect_left, bisect_right
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 import re
@@ -64,6 +64,37 @@ class LabelManager:
         """Get all the address of all existing labels"""
 
         return self._labels.keys()
+
+    def init_size_calculation(self, binary: BinaryReader):
+        """Prepares data to allow get_size to be used"""
+
+        # Sort addresses for size calculation
+        self._size_addrs = sorted([
+            addr for addr, t in self._labels.items()
+            if t != LabelType.LABEL
+        ])
+
+        # Add section ends
+        for sec in binary.sections:
+            end = sec.addr + sec.size
+            idx = bisect_left(self._size_addrs, end)
+            if idx == len(self._size_addrs) or self._size_addrs[idx] != end:
+                self._size_addrs.insert(idx, end)
+
+    def get_size(self, addr: int) -> int:
+        """Gets the size of the label at an address"""
+
+        assert self._labels[addr] != LabelType.LABEL, f"Tried to get size of label {addr:x}"
+        return self._size_addrs[bisect_right(self._size_addrs, addr)] - addr
+
+    def get_sizes(self) -> Dict[int, int]:
+        """Gets the address and size of all existing labels"""
+
+        return {
+            addr : self._size_addrs[bisect_right(self._size_addrs, addr)] - addr
+            for addr, t in self._labels.items()
+            if t != LabelType.LABEL
+        }
 
 @dataclass
 class Symbol:
