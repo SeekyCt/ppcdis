@@ -2,14 +2,13 @@
 Rel external label preprocessor
 """
 
-from typing import Dict, List
+from typing import List
 
 from .binarybase import SectionType
 from .binaryrel import RelReader, RelType
-from .fileutil import dump_to_pickle
-from .symbols import LabelType
+from .symbols import LabelManager, LabelType
 
-def get_rel_externs(dest: Dict[int, str], rel: RelReader):
+def label_rel_externs(dest: LabelManager, rel: RelReader):
     for rlc in rel.relocs:
         # Skip local relocs
         if rlc.target_module == rel.module_id:
@@ -26,20 +25,17 @@ def get_rel_externs(dest: Dict[int, str], rel: RelReader):
         # Get target
         target = rel.get_reloc_target(rlc)
 
-        # Skip known relocs
-        if target in dest:
-            continue
-        
+        # Set type
         if rel.find_section_containing(target).type == SectionType.TEXT:
-            dest[target] = LabelType.FUNCTION
+            dest.set_type(target, LabelType.FUNCTION)
         else:
-            dest[target] = LabelType.DATA
+            dest.set_type(target, LabelType.DATA)
 
 def dump_rel_externs(path: str, rels: List[RelReader]):
     # Get labels
-    labels = {}
+    labels = LabelManager()
     for rel in rels:
-        get_rel_externs(labels, rel)
+        label_rel_externs(labels, rel)
     
     # Output
-    dump_to_pickle(path, labels)
+    labels.output(path)

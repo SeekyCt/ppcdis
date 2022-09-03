@@ -16,11 +16,11 @@ from ppcdis.binarylect import LECTReader
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydol import DolReader
 from .csutil import DummyInstr, check_overwrites, cs_disasm, sign_half
-from .fileutil import dump_to_pickle, load_from_pickle
+from .fileutil import dump_to_pickle
 from .instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,
                        algebraicReferencingInsns, returnBranchInsns)
 from .overrides import OverrideManager
-from .symbols import LabelType, get_containing_function
+from .symbols import LabelManager, LabelType, get_containing_function
 
 class AnalysisOverrideManager(OverrideManager):
     """Analysis category OverrideManager"""
@@ -122,7 +122,7 @@ class Labeller:
         # Load any known labels
         if extra_label_paths is not None:
             for path in extra_label_paths:
-                for addr, t in load_from_pickle(path).items():
+                for addr, t in LabelManager(path).get_types():
                     if binary.addr_is_local(addr):
                         if t == LabelType.FUNCTION:
                             self.notify_tag(addr, LabelTag.CALL)
@@ -228,18 +228,19 @@ class Labeller:
     def output(self, path: str):
         """Outputs all labelled addresses and their types to json"""
 
+        labels = LabelManager()
+
         # Get types from tags
-        labels = {
-            addr : self._eval_tags(addr, tags)
-            for addr, tags in self._tags.items()
-        }
-        
+        for addr, tags in self._tags.items():
+            t = self._eval_tags(addr, tags)
+            labels.set_type(addr, t)
+
         # Apply overrides
         for addr, t in self._ovr.get_forced_types():
-            labels[addr] = t
+            labels.set_type(t)
 
         # Output
-        dump_to_pickle(path, labels)
+        labels.output(path)
 
 @unique
 class RelocType(IntEnum):

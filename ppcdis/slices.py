@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
 from .binarybase import BinarySection
-from .fileutil import load_from_pickle, load_from_yaml
-from .symbols import LabelType
+from .fileutil import load_from_yaml
+from .symbols import LabelManager, LabelType
 
 @dataclass(frozen=True)
 class Slice:
@@ -184,7 +184,7 @@ def calc_progress_info(sec: BinarySection, sources: List[Source], labels_path: s
     """Calculates decompiled slices size, total section size, and all symbol sizes for a section"""
 
     # Load labels pickle
-    labels = load_from_pickle(labels_path)
+    labels = LabelManager(labels_path)
 
     # Add slice sizes
     decomp_slices_size = 0
@@ -204,7 +204,7 @@ def calc_progress_info(sec: BinarySection, sources: List[Source], labels_path: s
     # Get symbol sizes
     syms = sorted(
         [
-            addr for addr, t in labels.items()
+            addr for addr, t in labels.get_types()
             if t != LabelType.LABEL and sec.contains_addr(addr)
         ] + [sec.addr + sec.size]
     )

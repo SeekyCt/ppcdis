@@ -5,22 +5,21 @@ Tools for LCF preprocessing
 from typing import List
 
 from .binarybase import BinaryReader
-from .fileutil import load_from_pickle
-from .symbols import SymbolGetter
+from .symbols import LabelManager, SymbolGetter
 
 def apply_forceactive(binary: BinaryReader, symbols_path: str, labels_path: str, externs_path: str,
                       txt: str) -> str:
     """Add forceactive entries to an LCF file from relextern output"""
 
     sym = SymbolGetter(symbols_path, None, labels_path, binary)
-    externs = load_from_pickle(externs_path)
+    externs = LabelManager(externs_path)
 
     return txt.replace(
         "PPCDIS_FORCEACTIVE",
         '\n'.join(
             sym.get_name(addr)
 
-            for addr in externs
+            for addr in externs.get_addrs()
             if binary.contains_addr(addr)
         )
     )

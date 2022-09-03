@@ -8,13 +8,62 @@ from typing import Dict, List, Tuple
 import re
 
 from .binarybase import BinaryReader, BinarySection
-from .fileutil import load_from_pickle, load_from_yaml
+from .fileutil import dump_to_pickle, load_from_pickle, load_from_yaml
 
 class LabelType:
     FUNCTION = "FUNCTION"
     LABEL = "LABEL"
     DATA = "DATA"
     JUMPTABLE = "JUMPTABLE"
+
+LABELS_PICKLE_VERSION = 2
+
+class LabelManager:
+    """Lower Level Symbol Handling"""
+
+    def __init__(self, path=None):
+        if path is not None:
+            dat = load_from_pickle(path)
+            assert dat.get("version") == LABELS_PICKLE_VERSION, \
+                f"Outdated labels pickle {path}, try a clean & rebuild"
+            self._labels = dat["labels"]
+        else:
+            self._labels = {}
+    
+    def output(self, path: str):
+        """Saves all labels to a pickle"""
+
+        dump_to_pickle(
+            path, 
+            {
+                "version" : LABELS_PICKLE_VERSION,
+                "labels" : self._labels
+            }
+        )
+
+    def set_type(self, addr: int, t: str):
+        """Sets the type of the label at an address
+        
+        Creates the label if it doesn't exist"""
+
+        self._labels[addr] = t
+
+    def get_type(self, addr: int) -> str:
+        """Gets the type of the label at an address
+        
+        Expects it to exist"""
+
+        return self._labels[addr]
+
+    def get_types(self) -> List[Tuple[int, str]]:
+        """Gets the address and type of all existing labels"""
+
+        return self._labels.items()
+
+    def get_addrs(self) -> List[int]:
+        """Get all the address of all existing labels"""
+
+        return self._labels.keys()
 
 @dataclass
 class Symbol:
@@ -64,10 +113,10 @@ class SymbolGetter:
                 symbols[key] = name_filt(val)
 
         # Add labels from analysis
-        dat = load_from_pickle(labels_path)
+        labels = LabelManager(labels_path)
         self._f = []
         named_labels = []
-        for addr, t in dat.items():
+        for addr, t in labels.get_types():
             if t == LabelType.FUNCTION:
                 name = symbols.get(addr, f"{binary.func_prefix}{addr:x}")
                 self._sym[addr] = Symbol(name, True)
