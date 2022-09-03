@@ -54,7 +54,7 @@ def dump_to_pickle(path: str, data: Dict):
         pickle.dump(data, f)
 
 def load_from_pickle(path: str) -> Dict:
-    """Loads an object from a yaml file"""
+    """Loads an object from a pickle file"""
 
     with open(path, 'rb') as f:
         return pickle.load(f)
