@@ -2,7 +2,7 @@
 Helpers for address naming
 """
 
-from bisect import bisect, bisect_left, bisect_right
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 import re
@@ -238,12 +238,12 @@ class SymbolGetter:
         """Returns the start addresses of the functions in a range"""
 
         # Find first function after start
-        idx = bisect(self._f, start)
-        assert idx > 0 and self._f[idx - 1] == start, f"Function was expected at {start:x}"
+        idx = bisect_left(self._f, start)
+        assert idx != len(self._f) and self._f[idx] == start, f"Function was expected at {start:x}"
 
         # Add functions until end is reached
-        # TODO: bisect too?
-        ret = [start]
+        # TODO: bisect + slice?
+        ret = []
         while idx < len(self._f) and self._f[idx] < end:
             ret.append(self._f[idx])
             idx += 1
@@ -269,7 +269,7 @@ def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySe
     """Returns the start and end addresses of the function containing an address from a list"""
 
     # Find first function after
-    idx = bisect(functions, instr_addr)
+    idx = bisect_right(functions, instr_addr)
 
     # Get address before
     if idx == 0:

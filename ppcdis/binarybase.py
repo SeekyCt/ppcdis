@@ -3,7 +3,7 @@ Class to read data from a binary
 """
 
 from abc import ABC, abstractmethod
-from bisect import bisect
+from bisect import bisect_right
 from dataclasses import dataclass
 from enum import Enum, unique
 from hashlib import sha1
@@ -201,8 +201,8 @@ class BinaryReader(ABC):
         """Finds the section containing an address"""
 
         # Search this binary first
-        idx = bisect(self._sec_addrs, addr)
-        if idx > 0:
+        idx = bisect_right(self._sec_addrs, addr)
+        if idx != 0:
             sec = self.sections[idx-1]
             if sec.contains_addr(addr):
                 return sec
