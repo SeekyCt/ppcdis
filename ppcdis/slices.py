@@ -196,6 +196,11 @@ def calc_progress_info(binary: BinaryReader, sources: List[Source], labels_path:
             total_sizes[sec_name] += size
             if source.source is not None:
                 decomp_slices_sizes[sec_name] += size
+    
+    # Add any missing sections to decomp
+    for sec in total_sizes:
+        if sec not in decomp_slices_sizes:
+            decomp_slices_sizes[sec] = 0
 
     # Get symbol sizes
     labels.init_size_calculation(binary)
