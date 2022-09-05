@@ -7,10 +7,9 @@ from enum import IntEnum, unique
 from struct import pack
 from typing import Dict, List, Tuple
 
-from ppcdis.fileutil import load_from_yaml_str
-
 from .binarybase import BinaryReader, BinarySection, SectionDef, SectionType
 from .binarydol import DolReader
+from .fileutil import load_from_yaml_str
 
 @unique
 class RelOffs(IntEnum):

@@ -10,10 +10,9 @@ from typing import Dict, List, Set, Tuple
 import capstone
 from capstone.ppc import *
 
-from ppcdis.binarylect import LECTReader
-
 from .analyser import Reloc, RelocType
 from .binarybase import BinaryReader, BinarySection, SectionType
+from .binarylect import LECTReader
 from .csutil import DummyInstr, sign_half, cs_disasm 
 from .instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
                        signExtendInsns, storeLoadInsns, renamedInsns)

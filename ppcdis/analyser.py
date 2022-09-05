@@ -11,10 +11,9 @@ from typing import Dict, List, Set, Tuple
 from capstone import CsInsn
 from capstone.ppc import *
 
-from ppcdis.binarylect import LECTReader
-
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydol import DolReader
+from .binarylect import LECTReader
 from .csutil import DummyInstr, check_overwrites, cs_disasm, sign_half
 from .fileutil import dump_to_pickle
 from .instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,

@@ -4,10 +4,9 @@ Loader for a binary from a yml
 
 from typing import Dict
 
-from ppcdis.binarylect import LECTReader
-
 from .binarybase import BinaryReader
 from .binarydol import DolReader
+from .binarylect import LECTReader
 from .binaryrel import RelReader
 from .fileutil import load_from_yaml
 

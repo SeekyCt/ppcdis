@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple, Union
 
 from .binarybase import BinaryReader, BinarySection
 from .fileutil import load_from_yaml
-from .symbols import LabelManager, LabelType
+from .symbols import LabelManager
 
 @dataclass(frozen=True)
 class Slice:
