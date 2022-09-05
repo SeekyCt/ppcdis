@@ -184,7 +184,7 @@ def calc_progress_info(binary: BinaryReader, sources: List[Source], labels_path:
     """Calculates decompiled slices size, total section size, and all symbol sizes for each section"""
 
     # Load labels pickle
-    labels = LabelManager(labels_path)
+    labels = LabelManager(labels_path, binary)
 
     # Add slice sizes
     decomp_slices_sizes = defaultdict(lambda: 0)
@@ -202,8 +202,4 @@ def calc_progress_info(binary: BinaryReader, sources: List[Source], labels_path:
         if sec not in decomp_slices_sizes:
             decomp_slices_sizes[sec] = 0
 
-    # Get symbol sizes
-    labels.init_size_calculation(binary)
-    symbol_sizes = labels.get_sizes()
-
-    return decomp_slices_sizes, total_sizes, symbol_sizes
+    return decomp_slices_sizes, total_sizes, labels.get_sizes()

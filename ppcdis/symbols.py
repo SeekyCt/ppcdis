@@ -21,7 +21,7 @@ LABELS_PICKLE_VERSION = 2
 class LabelManager:
     """Lower Level Symbol Handling"""
 
-    def __init__(self, path=None):
+    def __init__(self, path=None, binary=None):
         if path is not None:
             dat = load_from_pickle(path)
             assert dat.get("version") == LABELS_PICKLE_VERSION, \
@@ -29,6 +29,8 @@ class LabelManager:
             self._labels = dat["labels"]
         else:
             self._labels = {}
+        self._size_addrs = None
+        self._binary = binary
     
     def output(self, path: str):
         """Saves all labels to a pickle"""
@@ -65,8 +67,10 @@ class LabelManager:
 
         return self._labels.keys()
 
-    def init_size_calculation(self, binary: BinaryReader):
+    def _calc_sizes(self):
         """Prepares data to allow get_size to be used"""
+
+        assert self._binary is not None, f"A binary is required for size calculations"
 
         # Sort addresses for size calculation
         self._size_addrs = sorted([
@@ -75,7 +79,7 @@ class LabelManager:
         ])
 
         # Add section ends
-        for sec in binary.sections:
+        for sec in self._binary.sections:
             end = sec.addr + sec.size
             idx = bisect_left(self._size_addrs, end)
             if idx == len(self._size_addrs) or self._size_addrs[idx] != end:
@@ -84,11 +88,17 @@ class LabelManager:
     def get_size(self, addr: int) -> int:
         """Gets the size of the label at an address"""
 
+        if self._size_addrs is None:
+            self._calc_sizes()
+
         assert self._labels[addr] != LabelType.LABEL, f"Tried to get size of label {addr:x}"
         return self._size_addrs[bisect_right(self._size_addrs, addr)] - addr
 
     def get_sizes(self) -> Dict[int, int]:
         """Gets the address and size of all existing labels"""
+
+        if self._size_addrs is None:
+            self._calc_sizes()
 
         return {
             addr : self._size_addrs[bisect_right(self._size_addrs, addr)] - addr
