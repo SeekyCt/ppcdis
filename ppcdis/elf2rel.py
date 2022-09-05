@@ -111,6 +111,8 @@ class RelLinker:
             if sec["sh_type"] in ("SHT_PROGBITS", "SHT_NOBITS")
             and sec["sh_flags"] & SH_FLAGS.SHF_ALLOC
             and sec.name not in  ("forcestrip", "relsymdef")
+            # TODO: link sections by name instead of index
+            and sec.name in (".text", ".ctors", ".dtors", ".data", ".rodata", ".bss")
         ]
     
     def _get_symbol_by_name(self, name: str) -> Symbol:
@@ -358,6 +360,11 @@ class RelLinker:
                     "The following symbols are missing: ", 
                     *self._missing_symbols
                 ))
+            elif len(self._missing_symbols) != 0:
+                print("[WARN]: The following symbols are missing: ")
+                for sym in self._missing_symbols:
+                    print(sym)
+
 
             # Write alignments and bss size
             write_at(RelOffs.ALIGN, 4, align)
