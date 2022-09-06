@@ -210,6 +210,10 @@ class Disassembler:
         if not self._quiet:
             print(msg)
 
+    ################
+    # Instructions #
+    ################
+
     def _process_branch_hint(self, instr: capstone.CsInsn, line: DisasmLine):
         """Adds +/- to show conditional branch hints"""
 
@@ -402,6 +406,10 @@ class Disassembler:
         
         return ret.to_txt(self._sym, inline, hashable, referenced)
     
+    ########
+    # Data #
+    ########
+
     def _process_data(self, addr: int, val: bytes, enable_ref=True) -> str:
         """Takes a word of data and converts it to text"""
 
@@ -445,6 +453,10 @@ class Disassembler:
                 unaligned.pop(0)
 
         return ret
+
+    ###########
+    # General #
+    ###########
 
     def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
                       hashable=False, referenced=None) -> str:
@@ -523,6 +535,10 @@ class Disassembler:
 
             return '\n'.join(ret)
 
+    ##########
+    # Slices #
+    ##########
+
     def slice_to_text(self, section: BinarySection, sl: Slice) -> str:
         """Outputs the disassembly of a slice to text"""
 
@@ -539,17 +555,21 @@ class Disassembler:
             self._disasm_range(section, sl.start, sl.end) +
             "\n"
         )
-
-    def _section_to_txt(self, section: BinarySection) -> str:
-        """Outputs the disassembly of a single section to text"""
- 
-        self._print(f"Disassemble section {section.name}")
-
-        return (
-            section.get_start_text() +
-            self._disasm_range(section, section.addr, section.addr + section.size)
-        )
     
+    def output_slice(self, path: str, start: int, end: int):
+        """Outputs a slice's disassembly to a file"""
+
+        # Make slice
+        section = self._bin.find_section_containing(start)
+        sl = Slice(start, end, section.name)
+
+        with open(path, 'w') as f:
+            f.write(self.slice_to_text(section, sl))
+
+    #############
+    # Functions #
+    #############
+
     def function_to_text_with_referenced(
         self, addr: int, inline=False, extra=False, hashable=False, declare_mangled=False
     ) -> Tuple[str, Set[Tuple[int, str]]]:
@@ -635,6 +655,49 @@ class Disassembler:
 
         return txt
 
+    def output_function(self, path: str, addr: int, inline: bool, extra: bool):
+        """Outputs a function's disassembly to a file"""
+
+        with open(path, 'w') as f:
+            f.write(self.function_to_text(addr, inline, extra, False, inline))
+
+    ####################
+    # Full disassembly #
+    ####################
+
+    def _section_to_txt(self, section: BinarySection) -> str:
+        """Outputs the disassembly of a single section to text"""
+ 
+        self._print(f"Disassemble section {section.name}")
+
+        return (
+            section.get_start_text() +
+            self._disasm_range(section, section.addr, section.addr + section.size)
+        )
+
+    def output(self, path: str):
+        """Outputs disassembly to a file"""
+
+        with open(path, 'w') as f:
+            f.write(
+                ".include \"macros.inc\"\n\n" +
+                '\n\n'.join([
+                    self._section_to_txt(sec)
+                    for sec in self._bin.sections
+                ])
+                + '\n'
+            )
+    
+    ##############
+    # Jumptables #
+    ##############
+
+    def output_jumptable(self, path: str, addr: int):
+        """Outputs a jumptable C workaround to a file"""
+
+        with open(path, 'w') as f:
+            f.write(self.jumptable_to_text(addr))
+    
     def jumptable_to_text(self, addr: int) -> str:
         """Outputs a jumptable C workaround to a text"""
 
@@ -683,6 +746,14 @@ class Disassembler:
             extra
         ))
 
+    ###########
+    # Hashing #
+    ###########
+
+    def function_to_hash(self, addr: int) -> str:
+        txt = self.function_to_text(addr, hashable=True)
+        return sha1(txt.encode()).hexdigest()    
+
     def _section_to_hashes(self, section: BinarySection, no_addrs=False) -> str:
         """Outputs the hashes of a single section to text"""
  
@@ -701,56 +772,15 @@ class Disassembler:
 
         if not no_addrs:
             return json.dumps(
-                {hex(addr) : self._function_to_hash(addr) for addr in funcs},
+                {hex(addr) : self.function_to_hash(addr) for addr in funcs},
                 indent=4
             )
         else:
             return json.dumps(
-                [self._function_to_hash(addr) for addr in funcs],
+                [self.function_to_hash(addr) for addr in funcs],
                 indent=4
             )
-    
-    def _function_to_hash(self, addr: int) -> str:
-        txt = self.function_to_text(addr, hashable=True)
-        return sha1(txt.encode()).hexdigest()    
 
-    # TODO: separate file writing for API
-
-    def output(self, path: str):
-        """Outputs disassembly to a file"""
-
-        with open(path, 'w') as f:
-            f.write(
-                ".include \"macros.inc\"\n\n" +
-                '\n\n'.join([
-                    self._section_to_txt(sec)
-                    for sec in self._bin.sections
-                ])
-                + '\n'
-            )
-    
-    def output_slice(self, path: str, start: int, end: int):
-        """Outputs a slice's disassembly to a file"""
-
-        # Make slice
-        section = self._bin.find_section_containing(start)
-        sl = Slice(start, end, section.name)
-
-        with open(path, 'w') as f:
-            f.write(self.slice_to_text(section, sl))
-    
-    def output_function(self, path: str, addr: int, inline: bool, extra: bool):
-        """Outputs a function's disassembly to a file"""
-
-        with open(path, 'w') as f:
-            f.write(self.function_to_text(addr, inline, extra, False, inline))
-    
-    def output_jumptable(self, path: str, addr: int):
-        """Outputs a jumptable C workaround to a file"""
-
-        with open(path, 'w') as f:
-            f.write(self.jumptable_to_text(addr))
-    
     def output_hashes(self, path: str, no_addrs=False):
         """Outputs hashes to a file"""
 
