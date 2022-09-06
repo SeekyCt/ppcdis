@@ -413,7 +413,6 @@ class Disassembler:
     def _process_data(self, addr: int, val: bytes, enable_ref=True) -> str:
         """Takes a word of data and converts it to text"""
 
-        # TODO: GCC jump tables
         ops = f"0x{val.hex()}"
         if enable_ref:
             if self._rlc.check_jt_at(addr):
