@@ -29,7 +29,7 @@ def align_to(offs: int, align: int) -> Tuple[int, int]:
 class RelLinker:
     def __init__(self, dol_path: str, plf_path: str, module_id: int, ext_rels=None,
                  num_sections=None, name_offset=0, name_size=0, base_rel_path=None,
-                 ignore_missing=False):
+                 ignore_missing=False, ignore_sections=[]):
         self._f = open(plf_path, 'rb')
         self.plf = ELFFile(self._f)
         self.module_id = module_id
@@ -44,6 +44,7 @@ class RelLinker:
         self.name_offset = name_offset
         self.name_size = name_size
         self._ignore_missing = ignore_missing
+        self._ignore_sections = ignore_sections
         self._missing_symbols = set()
 
     def __del__(self):
@@ -111,8 +112,7 @@ class RelLinker:
             if sec["sh_type"] in ("SHT_PROGBITS", "SHT_NOBITS")
             and sec["sh_flags"] & SH_FLAGS.SHF_ALLOC
             and sec.name not in  ("forcestrip", "relsymdef")
-            # TODO: link sections by name instead of index
-            and sec.name in (".text", ".ctors", ".dtors", ".data", ".rodata", ".bss")
+            and sec.name not in self._ignore_sections
         ]
     
     def _get_symbol_by_name(self, name: str) -> Symbol:
