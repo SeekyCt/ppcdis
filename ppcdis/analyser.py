@@ -34,6 +34,7 @@ class AnalysisOverrideManager(OverrideManager):
         self._btr = self._make_ranges(yml.get("blocked_target_ranges", []))
         self._sd2s = self._make_size_ranges(yml.get("sdata_sizes", []))
         self._ft = yml.get("forced_types", {})
+        self._ful = yml.get("forced_upper_lowers", {})
 
     def is_blocked_pointer(self, addr: int) -> bool:
         """Checks if the potential pointer at an address is a known false positive"""
@@ -67,6 +68,10 @@ class AnalysisOverrideManager(OverrideManager):
         """Gets the forced types for addresses"""
 
         return list(self._ft.items())
+    
+    def get_forced_upper_lowers(self) -> List[Dict]:
+        
+        return self._ful
         
 @unique
 class LabelTag(Enum):
@@ -1063,6 +1068,34 @@ class Analyser:
         
         self._print(f"Postprocessing follows queued in {section.name}")
 
+        # Add override upper-lower pairs first
+        # TODO: somehow support jumptables?
+        for ovr in self._ovr.get_forced_upper_lowers():
+            upper = ovr["upper"]
+
+            # Skip if not in this section
+            if not section.contains_addr(upper):
+                continue
+
+            # Pair with lowers
+            handler = UpperHandler(self._rlc, self._disasm[section.name][upper])
+            for lower in ovr["lowers"]:
+                # Get instruction
+                instr = self._disasm[section.name][lower]
+
+                # Check if @ha required
+                algebraic = instr.id in algebraicReferencingInsns
+
+                # Get upper register and lower value
+                # TODO: deduplicate
+                if instr.id in storeLoadInsns:
+                    offs = instr.operands[1].mem.disp
+                else:
+                    offs = sign_half(instr.operands[2].imm) if algebraic else instr.operands[2].imm
+
+                handler.notify_lower(lower, offs, algebraic)
+
+        # Follow queued values
         queue = self._follow[section.name]
         while len(queue) > 0:
             addr = queue.pop(0)
