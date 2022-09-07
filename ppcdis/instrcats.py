@@ -403,12 +403,14 @@ storeLoadInsns = {
 """Misc instructions that can contain the lower half of a symbol reference"""
 lowerInsns = {
     PPC_INS_ADDI,
-    PPC_INS_ORI
+    PPC_INS_ORI,
+    PPC_INS_ADDIC
 }
 
 """Instructions that require @ha for their lis"""
 algebraicReferencingInsns = {
-    PPC_INS_ADDI
+    PPC_INS_ADDI,
+    PPC_INS_ADDIC
 } | storeLoadInsns
 
 """Instructions that overwrite the first gpr operand"""
