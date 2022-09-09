@@ -351,7 +351,7 @@ class RelReader(BinaryReader):
         else:
             return []
     
-    def addr_to_sec_offs(self, addr: int) -> Tuple[int, int, int]:
+    def addr_to_sec_offs(self, addr: int) -> Tuple[int, int]:
         """Converts an address to an offset into a section (for relocations)"""
 
         sec = self.find_section_containing(addr)
