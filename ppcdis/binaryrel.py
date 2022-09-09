@@ -53,6 +53,7 @@ class RelType(IntEnum):
     ADDR16_LO = 4
     ADDR16_HA = 6
     REL24 = 10
+    REL14 = 11
     RVL_NONE = 201
     RVL_SECT = 202
     RVL_STOP = 203
@@ -227,6 +228,13 @@ class RelReader(BinaryReader):
                 elif rel.t == RelType.REL24:
                     # Insert delta
                     delta_mask = 0x3ff_fffc
+                    delta = (target - (addr + i)) & delta_mask
+                    val = int.from_bytes(dat[i:i+4], 'big') & ~delta_mask
+                    ret.extend(int.to_bytes(val | delta, 4, 'big'))
+                    skip = 4
+                elif rel.t == RelType.REL14:
+                    # Insert delta
+                    delta_mask = 0xfffc
                     delta = (target - (addr + i)) & delta_mask
                     val = int.from_bytes(dat[i:i+4], 'big') & ~delta_mask
                     ret.extend(int.to_bytes(val | delta, 4, 'big'))

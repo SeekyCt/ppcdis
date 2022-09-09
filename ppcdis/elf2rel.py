@@ -29,7 +29,7 @@ def align_to(offs: int, align: int) -> Tuple[int, int]:
 class RelLinker:
     def __init__(self, dol_path: str, plf_path: str, module_id: int, ext_rels=None,
                  num_sections=None, name_offset=0, name_size=0, base_rel_path=None,
-                 ignore_missing=False):
+                 ignore_missing=False, ignore_sections=[]):
         self._f = open(plf_path, 'rb')
         self.plf = ELFFile(self._f)
         self.module_id = module_id
@@ -44,6 +44,7 @@ class RelLinker:
         self.name_offset = name_offset
         self.name_size = name_size
         self._ignore_missing = ignore_missing
+        self._ignore_sections = ignore_sections
         self._missing_symbols = set()
 
     def __del__(self):
@@ -111,6 +112,7 @@ class RelLinker:
             if sec["sh_type"] in ("SHT_PROGBITS", "SHT_NOBITS")
             and sec["sh_flags"] & SH_FLAGS.SHF_ALLOC
             and sec.name not in  ("forcestrip", "relsymdef")
+            and sec.name not in self._ignore_sections
         ]
     
     def _get_symbol_by_name(self, name: str) -> Symbol:
@@ -218,7 +220,7 @@ class RelLinker:
                 
             # Make runtime relocation if still needed
             if not skip_runtime:
-                if t in (RelType.ADDR32, RelType.ADDR16_LO, RelType.ADDR16_HA, RelType.REL24):
+                if t in (RelType.ADDR32, RelType.ADDR16_LO, RelType.ADDR16_HA, RelType.REL24, RelType.REL14):
                     relocs.append(RelReloc(
                         target_module, offs, t, target_section, target_offset
                     ))
@@ -357,6 +359,11 @@ class RelLinker:
                     "The following symbols are missing: ", 
                     *self._missing_symbols
                 ))
+            elif len(self._missing_symbols) != 0:
+                print("[WARN]: The following symbols are missing: ")
+                for sym in self._missing_symbols:
+                    print(sym)
+
 
             # Write alignments and bss size
             write_at(RelOffs.ALIGN, 4, align)
