@@ -241,7 +241,7 @@ class Labeller:
 
         # Apply overrides
         for addr, t in self._ovr.get_forced_types():
-            labels.set_type(t)
+            labels.set_type(addr, t)
 
         # Output
         labels.output(path)
