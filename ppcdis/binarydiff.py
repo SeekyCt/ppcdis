@@ -51,9 +51,10 @@ def diff_secs(good: BinaryReader, test: BinaryReader) -> bool:
 
     return any_diff
 
-def diff_relocs(good: RelReader, test: RelReader):
+def diff_relocs(good: RelReader, test: RelReader, max_diffs=-1):
     """Prints the diff of the relocations in two rels"""
 
+    n = 0
     for i, (r1, r2) in enumerate(zip(good.relocs, test.relocs)):
         if r1 != r2:
             print(f"Reloc {i} (0x{i * RelSize.RELOC_ENTRY})")
@@ -69,3 +70,7 @@ def diff_relocs(good: RelReader, test: RelReader):
                 test.sec_offs_to_addr(r2.section, r2.addend)
             )
             print_diff("Write Addr", r1.write_addr, r2.write_addr)
+            n += 1
+            if n == max_diffs:
+                print("Reached max diff count, stopping")
+                break

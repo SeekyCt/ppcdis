@@ -12,6 +12,8 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Diff the sections and relocations of dol/rel files")
     parser.add_argument("good", type=str, help="Path to good binary yml")
     parser.add_argument("test", type=str, help="Path to test binary")
+    parser.add_argument("-n", "--max-reloc-diffs", default=-1,
+                        help="Maximum number of rel relocation diffs to print")
     args = parser.parse_args()
 
     # Init colorama
@@ -24,4 +26,4 @@ if __name__ == "__main__":
     # Do diff
     ret = diff_secs(good, test)
     if not ret and isinstance(good, RelReader):
-        diff_relocs(good, test)
+        diff_relocs(good, test, args.max_reloc_diffs)
