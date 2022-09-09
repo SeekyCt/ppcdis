@@ -64,12 +64,8 @@ def diff_relocs(good: RelReader, test: RelReader, max_diffs=-1):
             print_diff("Type", r1.t, r2.t)
             print_diff("Section", r1.section, r2.section)
             print_diff("Addend", r1.addend, r2.addend)
-            print_diff(
-                "Target",
-                good.sec_offs_to_addr(r1.section, r1.addend),
-                test.sec_offs_to_addr(r2.section, r2.addend)
-            )
             if r1.write_addr is not None and r2.write_addr is not None:
+                print_diff("Target", good.get_reloc_target(r1), test.get_reloc_target(r2))
                 print_diff("Write Addr", r1.write_addr, r2.write_addr)
             n += 1
             if n == max_diffs:

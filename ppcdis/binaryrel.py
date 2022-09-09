@@ -357,14 +357,6 @@ class RelReader(BinaryReader):
         sec = self.find_section_containing(addr)
         return sec.rel_idx, addr - sec.addr
 
-    def sec_offs_to_addr(self, section_id: int, offs: int) -> int:
-        """Converts an offset into a section to an address (for relocations)"""
-
-        if section_id == 0:
-            return offs
-        else:
-            return self._rel_sections[section_id].addr + offs
-
     def load_other(self, path: str) -> "RelReader":
         """Loads another binary of the same type with the same settings"""
 
