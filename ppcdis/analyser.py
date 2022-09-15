@@ -1159,6 +1159,13 @@ class Analyser:
         """Finalises SDA relocations"""
 
         for addr, target in self._sda.items():
+            # Check valid
+            if not self._bin.addr_is_local(target):
+                print(f"Warning: ignoring SDA reference {addr:x}->{target:x}, outside of binary. "
+                      "(probably code with r2 overwritten, if so then add a blocked_pointers "
+                      "override for the instruction)")
+                continue
+
             # Handle size override
             start = self._ovr.is_resized_sdata(target)
             if start is not None:

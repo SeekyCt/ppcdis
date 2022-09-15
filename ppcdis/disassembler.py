@@ -365,9 +365,6 @@ class Disassembler:
                 if isinstance(self._bin, LECTReader):
                     rel = "-_SDA2_BASE_" if reg == PPC_REG_R2 else "-_SDA_BASE_"
                 else:
-                    assert self._bin.addr_is_local(ref.target), f"SDA reference outside of binary " \
-                        f"at {instr.address:x} with {ref} (probably code with r2 overwritten, " \
-                        f"if so then add a blocked_pointers override for 0x{instr.address:x})"
                     rel = '@sda21'
                     reg_name = "0"
 
