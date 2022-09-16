@@ -1160,7 +1160,7 @@ class Analyser:
 
         for addr, target in self._sda.items():
             # Check valid
-            if not self._bin.addr_is_local(target):
+            if not isinstance(self._bin, LECTReader) and not self._bin.addr_is_local(target):
                 print(f"Warning: ignoring SDA reference {addr:x}->{target:x}, outside of binary. "
                       "(probably code with r2 overwritten, if so then add a blocked_pointers "
                       "override for the instruction)")
