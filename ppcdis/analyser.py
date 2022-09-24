@@ -28,23 +28,25 @@ class AnalysisOverrideManager(OverrideManager):
         """Loads data from an analysis overrides yaml file"""
 
         # Load categories
-        self._bp = set(yml.get("blocked_pointers", []))
-        self._bpr = self._make_ranges(yml.get("blocked_pointer_ranges", []))
-        self._bt = set(yml.get("blocked_targets", []))
-        self._btr = self._make_ranges(yml.get("blocked_target_ranges", []))
-        self._sd2s = self._make_size_ranges(yml.get("sdata_sizes", []))
-        self._ft = yml.get("forced_types", {})
-        self._ful = yml.get("forced_upper_lowers", {})
+        self._blocked_pointers = set(yml.get("blocked_pointers", []))
+        self._blocked_pointer_ranges = self._make_ranges(yml.get("blocked_pointer_ranges", []))
+        self._blocked_targets = set(yml.get("blocked_targets", []))
+        self._blocked_target_ranges = self._make_ranges(yml.get("blocked_target_ranges", []))
+        self._sdata_sizes = self._make_size_ranges(yml.get("sdata_sizes", []))
+        self._forced_types = yml.get("forced_types", {})
+        self._forced_upper_lowers = yml.get("forced_upper_lowers", {})
 
     def is_blocked_pointer(self, addr: int) -> bool:
         """Checks if the potential pointer at an address is a known false positive"""
 
-        return addr in self._bp or self._check_range(self._bpr, addr)
+        return (addr in self._blocked_pointers or
+                self._check_range(self._blocked_pointer_ranges, addr))
 
     def is_blocked_target(self, addr: int) -> bool:
         """Checks if the address potentially pointed to is a known false positive"""
 
-        return addr in self._bt or self._check_range(self._btr, addr)
+        return (addr in self._blocked_targets or
+                self._check_range(self._blocked_target_ranges, addr))
     
     def is_blocked(self, addr: int, target: int) -> bool:
         """Checks if the pointer at addr to target is a known false positive"""
@@ -55,7 +57,7 @@ class AnalysisOverrideManager(OverrideManager):
         """Checks if an address is part of a bigger sdata symbol
         Returns the address of that if so"""
 
-        ranges = self._find_ranges(self._sd2s, addr)
+        ranges = self._find_ranges(self._sdata_sizes, addr)
         
         if len(ranges) == 1:
             return ranges[0].start
@@ -67,11 +69,11 @@ class AnalysisOverrideManager(OverrideManager):
     def get_forced_types(self) -> List[Tuple[int, str]]:
         """Gets the forced types for addresses"""
 
-        return list(self._ft.items())
+        return list(self._forced_types.items())
     
     def get_forced_upper_lowers(self) -> List[Dict]:
         
-        return self._ful
+        return self._forced_upper_lowers
         
 @unique
 class LabelTag(Enum):

@@ -28,26 +28,26 @@ class DisassemblyOverrideManager(OverrideManager):
         """Loads data from a disassembly overrides yaml file"""
 
         # Load categories
-        self._mfr = self._make_ranges(yml.get("manual_sdata2_ranges", []))
-        self._gmf = yml.get("global_manual_floats", False)
-        self._tc = yml.get("trim_ctors", False)
-        self._td = yml.get("trim_dtors", False)
+        self._manual_float_ranges = self._make_ranges(yml.get("manual_sdata2_ranges", []))
+        self._global_manual_floats = yml.get("global_manual_floats", False)
+        self._trim_ctors = yml.get("trim_ctors", False)
+        self._trim_dtors = yml.get("trim_dtors", False)
 
     def is_manual_sdata2(self, addr: int):
         """Checks if the symbol at an address should be made relative to r2 for manual handling
         in inline assembly"""
 
-        return self._gmf or self._check_range(self._mfr, addr)
+        return self._global_manual_floats or self._check_range(self._manual_float_ranges, addr)
     
     def should_trim_ctors(self):
         """Checks if terminating zeros should be removed from .ctors disassembly"""
 
-        return self._tc
+        return self._trim_ctors
 
     def should_trim_dtors(self):
         """Checks if terminating zeros should be removed from .ctors disassembly"""
 
-        return self._td
+        return self._trim_dtors
 
 class RelocGetter:
     """Class to handle relocation lookup"""
