@@ -154,10 +154,10 @@ class SymbolGetter:
                 symbols[key] = name_filt(val)
 
         # Add labels from analysis
-        labels = LabelManager(labels_path)
+        self._lab = LabelManager(labels_path)
         self._f = []
         named_labels = []
-        for addr, t in labels.get_types():
+        for addr, t in self._lab.get_types():
             if t == LabelType.FUNCTION:
                 name = symbols.get(addr, f"{binary.func_prefix}{addr:x}")
                 self._sym[addr] = Symbol(name, True)
@@ -219,6 +219,13 @@ class SymbolGetter:
         assert addr in self._sym, f"Address {addr:x} missed in analysis"
 
         return self._sym[addr].global_scope
+    
+    def get_size(self, addr: int) -> int:
+        """Gets the size of the symbol at an address
+
+        Must be a function or data"""
+        
+        return self._lab.get_size(addr)
 
     def get_unaligned_in(self, start: int, end: int) -> List[int]:
         """Returns all unaligned addresses in a range in order"""
