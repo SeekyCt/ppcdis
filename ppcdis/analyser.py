@@ -19,7 +19,7 @@ from .fileutil import dump_to_pickle
 from .instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,
                        algebraicReferencingInsns, returnBranchInsns)
 from .overrides import OverrideManager
-from .symbols import LabelManager, LabelType, get_containing_function
+from .symbols import LabelManager, LabelType, get_containing_symbol
 
 class AnalysisOverrideManager(OverrideManager):
     """Analysis category OverrideManager"""
@@ -169,7 +169,7 @@ class Labeller:
         """Returns the start and end addresses of the function containing an address"""
 
         sec = self._bin.find_section_containing(instr_addr)
-        return get_containing_function(self._f, instr_addr, sec)
+        return get_containing_symbol(self._f, instr_addr, sec)
 
     def commit_pointed_functions(self):
         """Add functions referenced by pointers"""

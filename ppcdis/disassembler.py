@@ -572,7 +572,7 @@ class Disassembler:
             self._sym.reset_hash_naming()
 
         # Get function bounds
-        start, end = self._sym.get_containing_function(addr)
+        start, end = self._sym.get_containing_symbol(addr)
         assert addr == start, f"Expected function at {addr:x}" 
 
         # Get section

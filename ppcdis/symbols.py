@@ -243,11 +243,11 @@ class SymbolGetter:
 
         return addr in self._jt_targets
     
-    def get_containing_function(self, instr_addr: int) -> Tuple[int, int]:
+    def get_containing_symbol(self, instr_addr: int) -> Tuple[int, int]:
         """Returns the start and end addresses of the function containing an address"""
 
         sec = self._bin.find_section_containing(instr_addr)
-        return get_containing_function(self._addrs, instr_addr, sec)
+        return get_containing_symbol(self._addrs, instr_addr, sec)
     
     def get_globals_in_range(self, start: int, end: int) -> List[int]:
         """Returns the start addresses of the functions/data in a range (no labels)"""
@@ -280,7 +280,7 @@ class SymbolGetter:
 
         return self._hash_names[addr]
 
-def get_containing_function(functions: List[int], instr_addr: int, sec: BinarySection
+def get_containing_symbol(functions: List[int], instr_addr: int, sec: BinarySection
                            ) -> Tuple[int, int]:
     """Returns the start and end addresses of the function containing an address from a list"""
 
