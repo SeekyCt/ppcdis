@@ -158,16 +158,11 @@ class DisasmLine:
     def to_txt(self, sym: SymbolGetter, inline=False, hashable=False, referenced=None) -> str:
         """Gets the disassembly text for a line"""
 
-        # Add .global and symbol name if required
+        # Add symbol name if required
         prefix = []
         name = sym.get_name(self.instr.address, hashable, True)
-        if name is not None:
-            if sym.is_global(self.instr.address):
-                # Don't include function label in inline asm
-                if not inline:
-                    prefix.append(f"\n.global {name}\n{name}:")
-            else:
-                prefix.append(f"{name}:")
+        if name is not None and not sym.is_global(self.instr.address):
+            prefix.append(f"{name}:")
         
         # Add jumptable label if required
         # .global affects branch hints, so a new label is created for this
@@ -430,8 +425,8 @@ class Disassembler:
         instr = DummyInstr(addr, val)
         return DisasmLine(instr, ".4byte", ops).to_txt(self._sym)
 
-    def _process_unaligned_data(self, addr: int, dat: bytes, unaligned: List[int]) -> str:
-        """Takes bytes of data and converts them to text"""
+    def _process_unaligned_byte(self, addr: int, val: bytes) -> str:
+        """Takes a byte of data and converts it to text"""
 
         # If starting on a word, check this whole word isn't meant to be a pointer
         if addr & 3 == 0:
@@ -441,18 +436,71 @@ class Disassembler:
                         "data is split below word alignment")
         
         # Split into individual bytes if a non-aligned reference falls within this word
-        ret = []
-        for i in range(len(dat)):
-            instr = DummyInstr(addr + i, dat[i:i+1])
-            ret.append(DisasmLine(instr, ".byte", hex(dat[i])).to_txt(self._sym))
-            if unaligned[0] == addr + i:
-                unaligned.pop(0)
-
-        return ret
+        instr = DummyInstr(addr, val)
+        return DisasmLine(instr, ".byte", f"0x{val.hex()}").to_txt(self._sym)
 
     ###########
     # General #
     ###########
+
+    def _disasm_function(self, addr: int, inline=False, hashable=False, referenced=None) -> str:
+        """Disassembles a single function of text"""
+
+        # Get end address
+        size = self._sym.get_size(addr)
+
+        # Disassemble
+        lines = cs_disasm(addr, self._bin.read(addr, size), self._quiet)
+
+        # Apply fixes and relocations
+        return '\n'.join([
+            self._process_instr(lines[addr], inline, hashable, referenced)
+            for addr in lines
+        ])
+
+    def _disasm_data(self, sec: BinarySection, addr: int) -> str:
+        """Disassembles a single symbol of data"""
+
+        # Get end address
+        end = addr + self._sym.get_size(addr)
+
+        # Trim if required
+        if (
+            sec.name == ".ctors" and self._ovr.should_trim_ctors() or
+            sec.name == ".dtors" and self._ovr.should_trim_dtors()
+        ):
+            while self._bin.read_word(end - 4) == 0:
+                end -= 4
+
+        # Disassemble
+        ret = []
+        while addr < end:
+            if addr & 3 != 0 or end - addr < 4:
+                val = self._bin.read(addr, 1)
+                ret.append(self._process_unaligned_byte(addr, val))
+                addr += 1
+            else:
+                dat = self._bin.read(addr, 4)
+                ret.append(self._process_data(addr, dat))
+                addr += 4
+
+        return '\n'.join(ret)
+
+    def _disasm_symbol(self, sec: BinarySection, addr: int, inline=False, hashable=False,
+                       referenced=None) -> str:
+        """Disassembles a single symbol of assembly or data"""
+
+        # Add .global and symbol name if required
+        name = self._sym.get_name(addr, hashable, True)
+        assert name is not None and self._sym.is_global(addr)
+        if inline:
+            prefix = "nofralloc\n" if sec.type == SectionType.TEXT else ""
+        else:
+            prefix = f"\n.global {name}\n{name}:\n"
+        if sec.type == SectionType.TEXT:
+            return prefix + self._disasm_function(addr, inline, hashable, referenced)
+        else:
+            return prefix + self._disasm_data(sec, addr)
 
     def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
                       hashable=False, referenced=None) -> str:
@@ -463,73 +511,15 @@ class Disassembler:
         assert sec.addr <= start < end <= sec.addr + sec.size, \
             f"Disassembly {start:x}-{end:x} crosses bounds of section {sec.name}"
 
-        if sec.type == SectionType.TEXT:
-            # Disassemble
-            lines = cs_disasm(start, self._bin.read(start, end - start), self._quiet)
-
-            # Apply fixes and relocations
-            nofralloc = "nofralloc\n" if inline else ""
-            return nofralloc + '\n'.join([
-                self._process_instr(lines[addr], inline, hashable, referenced)
-                for addr in lines
-            ])
-
-        elif sec.type in (SectionType.DATA, SectionType.BSS):
+        if sec.type in (SectionType.DATA, SectionType.BSS):
             assert not inline, "Only text can be disassembled for inline assembly"
             assert not hashable, "Only text can be disassembled for hashing"
-
-            # Trim if required
-            if (
-                sec.name == ".ctors" and self._ovr.should_trim_ctors() or
-                sec.name == ".dtors" and self._ovr.should_trim_dtors()
-            ):
-                while self._bin.read_word(end - 4) == 0:
-                    end -= 4
-
-            # Setup
-            ret = []
-            unaligned = self._sym.get_unaligned_in(start, end)
-            unaligned.append(0xffff_ffff) # Hack so that [0] can always be read
-
-            # The ppcdis slice system doesn't support unaligned slices, but other projects using
-            # the python api require it, so the disassembler has support for it.
-            # The balign of all data sections must be set to 0 if using this
-
-            # Disassemble starting unaligned data
-            if start & 3 != 0:
-                # Calculate length
-                rounded = (start + 3) & ~3
-                size = rounded - start
-
-                # Disassemble
-                dat = self._bin.read(start, size)
-                ret.extend(self._process_unaligned_data(start, dat, unaligned))
-
-                # Move to aligned start
-                start = rounded
-            
-            # Prepare end unaligned data
-            if end & 3 != 0:
-                rounded = end & ~3
-                end_size = end - rounded
-                end = rounded
-            else:
-                end_size = 0
-
-            # Disassemble aligned data
-            for p in range(start, end, 4):
-                dat = self._bin.read(p, 4)
-                if unaligned[0] < p + 4 or p + 4 > end:
-                    ret.extend(self._process_unaligned_data(p, dat, unaligned))
-                else:
-                    ret.append(self._process_data(p, dat))
-            
-            # Disassemble end unaligned data
-            if end_size > 0:
-                dat = self._bin.read(end, end_size)
-                ret.extend(self._process_unaligned_data(end, dat, unaligned))
-
-            return '\n'.join(ret)
+ 
+        addrs = self._sym.get_globals_in_range(start, end)
+        return '\n'.join(
+            self._disasm_symbol(sec, addr, inline, hashable, referenced)
+            for addr in addrs
+        )
 
     ##########
     # Slices #

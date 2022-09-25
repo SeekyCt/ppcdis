@@ -154,14 +154,12 @@ class SymbolGetter:
                 symbols[key] = name_filt(val)
 
         # Add labels from analysis
-        self._lab = LabelManager(labels_path)
-        self._f = []
+        self._lab = LabelManager(labels_path, binary)
         named_labels = []
         for addr, t in self._lab.get_types():
             if t == LabelType.FUNCTION:
                 name = symbols.get(addr, f"{binary.func_prefix}{addr:x}")
                 self._sym[addr] = Symbol(name, True)
-                self._f.append(addr)
             elif t == LabelType.LABEL:
                 # Labels shouldn't be named, suggests analysis missed function
                 if addr in symbols:
@@ -179,7 +177,7 @@ class SymbolGetter:
                 self._sym[addr] = Symbol(f"jtbl_{addr:x}", True)
             else:
                 assert 0, f"{addr:x} has invalid type {t}"
-        self._f.sort()
+        self._addrs = sorted(addr for addr, sym in self._sym.items() if sym.global_scope == True)
 
         assert len(named_labels) == 0, (
             f"Tried to name some symbols that were detected as labels. You may want to add these "
@@ -249,20 +247,21 @@ class SymbolGetter:
         """Returns the start and end addresses of the function containing an address"""
 
         sec = self._bin.find_section_containing(instr_addr)
-        return get_containing_function(self._f, instr_addr, sec)
+        return get_containing_function(self._addrs, instr_addr, sec)
     
-    def get_functions_in_range(self, start: int, end: int) -> List[int]:
-        """Returns the start addresses of the functions in a range"""
+    def get_globals_in_range(self, start: int, end: int) -> List[int]:
+        """Returns the start addresses of the functions/data in a range (no labels)"""
 
-        # Find first function after start
-        idx = bisect_left(self._f, start)
-        assert idx != len(self._f) and self._f[idx] == start, f"Function was expected at {start:x}"
+        # Find first symbol after start
+        idx = bisect_left(self._addrs, start)
+        assert idx != len(self._addrs) and self._addrs[idx] == start, \
+               f"Symbol was expected at {start:x}"
 
         # Add functions until end is reached
         # TODO: bisect + slice?
         ret = []
-        while idx < len(self._f) and self._f[idx] < end:
-            ret.append(self._f[idx])
+        while idx < len(self._addrs) and self._addrs[idx] < end:
+            ret.append(self._addrs[idx])
             idx += 1
 
         return ret
