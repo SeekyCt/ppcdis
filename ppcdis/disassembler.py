@@ -684,26 +684,23 @@ class Disassembler:
         with open(path, 'w') as f:
             f.write(self.jumptable_to_text(addr))
     
-    def jumptable_to_text(self, addr: int) -> str:
-        """Outputs a jumptable C workaround to a text"""
+    def jumptable_to_text_with_referenced(self, addr: int) -> Tuple[str, Set[Tuple[int, str]]]:
+        """Outputs a jumptable C workaround and all labels it references"""
 
         self._print(f"Disassemble jumptable {addr:x}")
+
+        referenced = ReferencedTracker()
 
         # Get jumptable size and name
         size = self._rlc.get_jumptable_size(addr)
         jt_sym = self._sym.get_name(addr)
          
         # Get targets
-        targets = [
-            self._bin.read_word(i)
-            for i in range(addr, addr + size, 4)
-        ]
-
-        # Declare labels
-        decl = '\n'.join(
-            f"void jump_{target:x}();"
-            for target in targets
-        )
+        targets = []
+        for i in range(addr, addr + size, 4):
+            target = self._bin.read_word(i)
+            targets.append(target)
+            referenced.notify(target, f"jump_{target:x}")
 
         # For some reason, CW will align pointer arrays to 8 bytes if they have an even length,
         # but doesn't do this for jumptables
@@ -722,7 +719,6 @@ class Disassembler:
             extra = ""
 
         return '\n'.join((
-            decl,
             f"void (*{jt_sym}[])() = {{",
             '\n'.join(
                 f"    jump_{target:x},"
@@ -730,7 +726,20 @@ class Disassembler:
             ),
             "};",
             extra
-        ))
+        )), referenced.get_referenced()
+
+    def jumptable_to_text(self, addr: int) -> str:
+        """Outputs a jumptable C workaround"""
+
+        txt, targets = self.jumptable_to_text_with_referenced(addr)
+
+        # Declare labels
+        decl = '\n'.join(
+            f"void {name}();"
+            for target, name in targets
+        )
+
+        return '\n'.join((decl, txt))
 
     ###########
     # Hashing #
