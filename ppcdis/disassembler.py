@@ -674,9 +674,73 @@ class Disassembler:
                 + '\n'
             )
     
-    ##############
-    # Jumptables #
-    ##############
+    ##########
+    # C Data #
+    ##########
+
+    def data_to_text_with_referenced(self, addr: int, width=4) -> Tuple[str, Set[Tuple[int, str]]]:
+
+        self._print(f"Disassemble data {addr:x}")
+
+        # Use jumptable function instead if needed
+        size = self._sym.get_size(addr)
+        if self._rlc.check_jt_at(addr):
+            assert addr & 3 == 0 and size == self._rlc.get_jumptable_size(addr), \
+                f"Invalid jumptable parameters"
+            
+            return self.jumptable_to_text_with_referenced(addr)
+
+        # Check alignment requirements
+        if addr & 3 != 0 or size & 3 != 0:
+            unit = 1
+            t = "u8"
+        else:
+            unit = 4
+            t = "u32"
+        
+        # Disassemble values
+        referenced = ReferencedTracker()
+        vals = []
+        for p in range(addr, addr+size, unit):
+            if unit == 4:
+                ref = self._rlc.get_reference_at(p)
+                if ref is not None:
+                    # Output reference if needed
+                    assert ref.t == RelocType.NORMAL, f"Bad reloc {p:x} -> {ref}"
+                    assert ref.offs == 0, f"Can't use pointer offsets in C {p:x} -> {ref}"
+                    name = self._sym.get_name(ref.target)
+                    val = f"(u32)&{name}"
+                    referenced.notify(ref.target, name)
+                else:
+                    # Output raw value otherwise
+                    val = hex(self._bin.read_word(p))
+            else:
+                # Warn if ignoring references
+                ref = self._rlc.get_reference_at(p)
+                if ref is not None:
+                    print(f"Warning: reference to {ref.target:x} at {addr:x} ignored, "
+                            "data is split below word alignment")
+
+                val = hex(self._bin.read_byte(p))
+
+            vals.append(val)
+
+        # Format
+        lines = []
+        for i in range(0, len(vals), width):
+            lines.append('    ' + ', '.join(vals[i:i+width]))
+        body = ',\n'.join(lines)
+        sym = self._sym.get_name(addr)
+        txt = f"{t} {sym}[] = {{\n{body}\n}};"
+
+        return txt, referenced.get_referenced()
+
+    def data_to_text(self, addr: int) -> str:
+        """Outputs a single data symbol as a C u32 array (or u8 if required)"""
+
+        txt, _ = self.data_to_text_with_referenced(addr)
+
+        return txt
 
     def output_jumptable(self, path: str, addr: int):
         """Outputs a jumptable C workaround to a file"""
