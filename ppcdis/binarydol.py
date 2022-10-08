@@ -111,13 +111,16 @@ class DolReader(BinaryReader):
         bss_size = self.read_word(OFFS_BSS_SIZE, True)
         bss_end = bss_start + bss_size
 
-        # Add unlisted bss sections
+        # Add unlisted bss sections where size can be inferred from cutting
         bss_n = 0
         sections_with_bss = []
         for section in sections:
             # Section cutting bss range into sub-section
             if bss_start < section.addr <= bss_end:
                 sdef = bss_defs[bss_n]
+                # TODO: support back to back bss in between sections
+                assert sdef.bss_forced_size is None, "Error: bss_forced_size is only " \
+                    "supported for sections after data currently."
                 sections_with_bss.append(
                     BinarySection(sdef.name, SectionType.BSS, 0, bss_start,
                                   section.addr - bss_start, sdef.attr, sdef.nobits, sdef.balign)
@@ -128,12 +131,24 @@ class DolReader(BinaryReader):
             elif bss_start == section.addr:
                 bss_start = section.addr + section.size
             sections_with_bss.append(section)
-        if bss_start < bss_end:
+
+        # Add remaining definitions
+        for bss_n in range(bss_n, len(bss_defs)):
             sdef = bss_defs[bss_n]
+            size = sdef.bss_forced_size
+            if size is None:
+                if bss_n + 1 == len(bss_defs):
+                    size = bss_end - bss_start
+                else:
+                    assert False, f"Unknown size for {sdef.name}, either remove the section " \
+                        "or set bss_forced_size"
             sections_with_bss.append(
-                BinarySection(sdef.name, SectionType.BSS, 0, bss_start, bss_end - bss_start,
+                BinarySection(sdef.name, SectionType.BSS, 0, bss_start, size,
                               sdef.attr, sdef.nobits, sdef.balign)
             )
+            bss_start += size
+
+        assert bss_start == bss_end, f"BSS end not reached, only found up to {bss_start:x}"
 
         return sections_with_bss
 
