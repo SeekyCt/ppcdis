@@ -25,22 +25,22 @@ The format is:
 ```yml
 section_defs:
     text:
-        section1:
-            prop1: val
-            ...
+        - name: section1
+          prop1: val
+          ...
         ...
     data:
-        section1:
-            ...
         ...
     bss:
-        section1:
-            ...
         ...
 ```
 
-The properties of a section are:
-    - `attr` (optional) attributes given to the section in disassembly
+All properties other than name are optional. They are:
+- `attr`: attributes given to the section in disassembly
+- `nobits`: tags a section with `@nobits` in disassembly
+- `balign`: the number of bytes to align the start of a slice to. Defaults to 8 for data and 0 for text
+- `bss_forced_size`: forces the size of a bss section, required when two bss sections are back to back.
+- `bss_start_align`: forces the start of a bss section to be aligned by an amount
 
 ## relextern
 
