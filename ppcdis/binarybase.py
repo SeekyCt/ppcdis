@@ -9,6 +9,7 @@ from enum import Enum, unique
 from hashlib import sha1
 import os
 from struct import unpack
+from sys import stderr
 from typing import Dict, List, Tuple
 
 # Dummy offset used to indicate a read from a bss section
@@ -34,7 +35,7 @@ class SectionDef:
     @classmethod
     def parse(cls, defs):
         if isinstance(defs, Dict):
-            print("Warning: the dict section_defs syntax is deprecated")
+            print("Warning: the dict section_defs syntax is deprecated", file=stderr)
             return [
                 cls(name, **(dat if dat is not None else {}))
                 for name, dat in defs.items()
