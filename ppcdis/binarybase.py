@@ -32,6 +32,7 @@ class SectionDef:
     nobits: bool = False
     balign: int = None
     bss_forced_size: int = None
+    bss_start_align: int = None
 
     @classmethod
     def parse(cls, defs):

@@ -118,23 +118,40 @@ class DolReader(BinaryReader):
             # Section cutting bss range into sub-section
             if bss_start < section.addr <= bss_end:
                 sdef = bss_defs[bss_n]
+
                 # TODO: support back to back bss in between sections
                 assert sdef.bss_forced_size is None, "Error: bss_forced_size is only " \
                     "supported for sections after data currently."
+
+                # Align start
+                if sdef.bss_start_align is not None:
+                    mask = sdef.bss_start_align - 1
+                    bss_start = (bss_start + mask) & ~mask
+
                 sections_with_bss.append(
                     BinarySection(sdef.name, SectionType.BSS, 0, bss_start,
                                   section.addr - bss_start, sdef.attr, sdef.nobits, sdef.balign)
                 )
+
                 bss_n += 1
                 bss_start = section.addr + section.size
+
             # Back-to-back sections cutting bss range into 1 sub-section
             elif bss_start == section.addr:
                 bss_start = section.addr + section.size
+
             sections_with_bss.append(section)
 
         # Add remaining definitions
         for bss_n in range(bss_n, len(bss_defs)):
             sdef = bss_defs[bss_n]
+
+            # Align start
+            if sdef.bss_start_align is not None:
+                mask = sdef.bss_start_align - 1
+                bss_start = (bss_start + mask) & ~mask
+
+            # Get size
             size = sdef.bss_forced_size
             if size is None:
                 if bss_n + 1 == len(bss_defs):
@@ -142,13 +159,17 @@ class DolReader(BinaryReader):
                 else:
                     assert False, f"Unknown size for {sdef.name}, either remove the section " \
                         "or set bss_forced_size"
+
             sections_with_bss.append(
                 BinarySection(sdef.name, SectionType.BSS, 0, bss_start, size,
                               sdef.attr, sdef.nobits, sdef.balign)
             )
             bss_start += size
 
-        assert bss_start == bss_end, f"BSS end not reached, only found up to {bss_start:x}"
+        assert bss_start >= bss_end, f"BSS end not reached, only found up to {bss_start:x} but " \
+            f"expected {bss_end:x}"
+        assert bss_start <= bss_end, f"BSS end exceeded, found up to {bss_start:x} but " \
+            f"expected {bss_end:x}"
 
         return sections_with_bss
 
