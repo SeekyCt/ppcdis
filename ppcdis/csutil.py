@@ -59,14 +59,11 @@ def cs_should_ignore(instr: CsInsn) -> bool:
     
     return False
 
-def cs_disasm(addr: int, dat: bytes, quiet=False) -> OrderedDict[int, CsInsn]:
+def cs_disasm(addr: int, dat: bytes) -> OrderedDict[int, CsInsn]:
     """Disassembles code into an ordered dict of CsInsns"""
 
     cs = Cs(CS_ARCH_PPC, CS_MODE_32 | CS_MODE_BIG_ENDIAN)
     cs.detail = True
-
-    if not quiet:
-        print(f"Capstone: Dissassemble {addr:x}-{addr+len(dat):x}")
 
     ret = OrderedDict()
     i = 0
@@ -84,8 +81,5 @@ def cs_disasm(addr: int, dat: bytes, quiet=False) -> OrderedDict[int, CsInsn]:
             val = dat[i:i + 4]
             ret[addr + i] = DummyInstr(addr + i, val)
             i += 4
-    
-    if not quiet:
-        print("Capstone: done")
 
     return ret

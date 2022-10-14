@@ -450,7 +450,7 @@ class Disassembler:
         size = self._sym.get_size(addr)
 
         # Disassemble
-        lines = cs_disasm(addr, self._bin.read(addr, size), self._quiet)
+        lines = cs_disasm(addr, self._bin.read(addr, size))
 
         # Apply fixes and relocations
         return '\n'.join([
