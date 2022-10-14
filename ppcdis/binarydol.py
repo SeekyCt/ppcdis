@@ -116,7 +116,7 @@ class DolReader(BinaryReader):
         sections_with_bss = []
         for section in sections:
             # Section cutting bss range into sub-section
-            if bss_start < section.addr <= bss_end:
+            if bss_start < section.addr and bss_n < len(bss_defs):
                 sdef = bss_defs[bss_n]
 
                 # TODO: support back to back bss in between sections
@@ -127,14 +127,20 @@ class DolReader(BinaryReader):
                 if sdef.bss_start_align is not None:
                     mask = sdef.bss_start_align - 1
                     bss_start = (bss_start + mask) & ~mask
+                
+                # Handle early end
+                end = min(section.addr, bss_end)
 
                 sections_with_bss.append(
                     BinarySection(sdef.name, SectionType.BSS, 0, bss_start,
-                                  section.addr - bss_start, sdef.attr, sdef.nobits, sdef.balign)
+                                  end - bss_start, sdef.attr, sdef.nobits, sdef.balign)
                 )
 
                 bss_n += 1
-                bss_start = section.addr + section.size
+                if end == bss_end:
+                    bss_start = end
+                else:
+                    bss_start = section.addr + section.size
 
             # Back-to-back sections cutting bss range into 1 sub-section
             elif bss_start == section.addr:
