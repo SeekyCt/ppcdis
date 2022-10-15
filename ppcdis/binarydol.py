@@ -152,6 +152,9 @@ class DolReader(BinaryReader):
         for bss_n in range(bss_n, len(bss_defs)):
             sdef = bss_defs[bss_n]
 
+            assert bss_start < bss_end, f"Reached end of bss with only {bss_n} sections, expected {len(bss_defs)}. " \
+                "You may want to remove some sections with section_defs. (Most common cause is .sbss2 not existing)"
+
             # Align start
             if sdef.bss_start_align is not None:
                 mask = sdef.bss_start_align - 1
