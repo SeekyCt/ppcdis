@@ -605,7 +605,7 @@ class Analyser:
             text_size = sec.size
         
         # Disassemble
-        lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size), self._quiet)
+        lines = cs_disasm(sec.addr, self._bin.read(sec.addr, text_size))
         self._disasm[sec.name] = lines
 
     def _analyse_section(self, sec: BinarySection):
