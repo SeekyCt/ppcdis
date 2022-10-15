@@ -485,11 +485,20 @@ class Analyser:
 
             if (
                 not isinstance(dest_instr, DummyInstr) and
-                dest_instr.id == PPC_INS_STWU and 
-                dest_instr.operands[0].reg == PPC_REG_R1 and
-                dest_instr.operands[1].mem.base == PPC_REG_R1
+                (
+                    (
+                        dest_instr.id == PPC_INS_STWU and 
+                        dest_instr.operands[0].reg == PPC_REG_R1 and
+                        dest_instr.operands[1].mem.base == PPC_REG_R1
+                    )
+                    or
+                    (
+                        dest_instr.id == PPC_INS_MFLR and
+                        dest_instr.operands[0].reg == PPC_REG_R0
+                    )
+                )
             ):
-                # A branch to a stwu r1, x (r1) should always be a tail call
+                # A branch to a stwu r1, x (r1) or mflr r0 should always be a tail call
                 tag = LabelTag.CALL
             else:
                 # If this is later bl'd to, pointed to, or found to cross a function boundary,
