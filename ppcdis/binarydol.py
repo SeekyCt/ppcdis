@@ -10,35 +10,23 @@ from .fileutil import load_from_yaml_str
 default_section_defs = load_from_yaml_str("""
 text:
   - name: .init
-
   - name: .text
-
 data:
   - name: extab_
     attr: a
-
   - name: extabindex_
     attr: a
-
   - name: .ctors
     balign: 0
-
   - name: .dtors
     balign: 0
-
   - name: .rodata
-
   - name: .data
-
   - name: .sdata
-
   - name: .sdata2
-
 bss:
   - name: .bss
-
   - name: .sbss
-
   - name: .sbss2
 """)
 

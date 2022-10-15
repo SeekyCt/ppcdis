@@ -89,18 +89,13 @@ class RelBinarySection(BinarySection):
 default_section_defs = load_from_yaml_str("""
 text:
   - name: .text
-
 data:
   - name: .ctors
     balign: 0
-
   - name: .dtors
     balign: 0
-
   - name: .rodata
-
   - name: .data
-
 bss:
   - name: .bss
 """)
