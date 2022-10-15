@@ -10,7 +10,7 @@ from capstone import Cs, CS_ARCH_PPC, CsInsn, CS_MODE_32, CS_MODE_BIG_ENDIAN
 from capstone.ppc import *
 
 from .instrcats import (blacklistedInsns, firstGprWriteInsns, firstLastGprWriteInsns, 
-                       lastGprWriteInsns, manyGprWriteInsns)
+                       lastGprWriteInsns)
 
 @dataclass
 class DummyInstr:
@@ -33,12 +33,11 @@ def check_overwrites(instr: CsInsn) -> Tuple[int]:
         return (instr.operands[0].reg, instr.operands[1].mem.base)
     elif instr.id in lastGprWriteInsns:
         return (instr.operands[1].mem.base,)
-    elif instr.id in manyGprWriteInsns:
-        if instr.id == PPC_INS_LMW:
-            return range(instr.operands[0].reg, PPC_REG_R31 + 1)
-        else:
-            # TODO: load string word
-            raise NotImplementedError
+    elif instr.id == PPC_INS_LMW:
+        return range(instr.operands[0].reg, PPC_REG_R31 + 1)
+    elif instr.id == PPC_INS_LSWI:
+        n = (instr.operands[2].imm + 3) // 4
+        return range(instr.operands[0].reg, instr.operands[0].reg + n)
     else:
         return ()
 
