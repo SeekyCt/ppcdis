@@ -157,6 +157,8 @@ void __cvt_dbl_usll(void);
 void __cvt_dbl_ull(void);
 void __cvt_fp2unsigned(void);
 
+void __unexpected(void);
+
 #ifdef __cplusplus
     }
 #endif
