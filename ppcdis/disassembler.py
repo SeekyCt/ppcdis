@@ -252,7 +252,7 @@ class Disassembler:
                 name = f"*{sign}0x{abs(delta):x}"
         
             # Add to referenced list
-            elif referenced is not None:
+            elif referenced is not None and self._sym.is_global(dest):
                 referenced.notify(dest, name)
 
         # Replace destination with label name
