@@ -227,14 +227,19 @@ class SymbolGetter:
         else:
             return None
 
-    def is_global(self, addr: int) -> bool:
+    def is_global(self, addr: int, miss_ok=False) -> bool:
         """Checks whether the symbol at an address is global
         
-        Asserts the symbol exists"""
+        Asserts the symbol exists unless miss_ok"""
 
-        assert addr in self._sym, f"Address {addr:x} missed in analysis"
+        assert miss_ok or addr in self._sym, f"Address {addr:x} missed in analysis"
 
-        return self._sym[addr].global_scope
+        sym = self._sym.get(addr)
+
+        if sym is not None:
+            return sym.global_scope
+        else:
+            return False
     
     def get_size(self, addr: int) -> int:
         """Gets the size of the symbol at an address
