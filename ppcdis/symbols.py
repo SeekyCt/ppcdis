@@ -272,8 +272,6 @@ class SymbolGetter:
 
         # Find first symbol after start
         idx = bisect_left(self._addrs, start)
-        assert idx != len(self._addrs) and self._addrs[idx] == start, \
-               f"Symbol was expected at {start:x}"
 
         # Add functions until end is reached
         # TODO: bisect + slice?
