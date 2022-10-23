@@ -536,7 +536,7 @@ class Disassembler:
         self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
 
         # DEVKITPPC r40+ can give issues with slices not starting with symbols
-        if self._sym.get_name(sl.start, miss_ok=True) is None:
+        if not self._sym.is_global(sl.start, miss_ok=True):
             self._sym.create_slice_label(sl.start, section.type == SectionType.TEXT)
 
         return (
