@@ -48,6 +48,11 @@ class LabelManager:
         
         Creates the label if it doesn't exist"""
 
+        # Add to size addrs if needed
+        if self._size_addrs is not None and addr not in self._labels:
+            idx = bisect_left(self._size_addrs, addr)
+            self._size_addrs.insert(idx, addr)
+
         self._labels[addr] = t
 
     def get_type(self, addr: int) -> str:
