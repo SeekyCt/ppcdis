@@ -516,6 +516,11 @@ class Disassembler:
             assert not hashable, "Only text can be disassembled for hashing"
  
         addrs = self._sym.get_globals_in_range(start, end)
+ 
+        assert len(addrs) > 0 and addrs[0] == start, f"Expected symbol at {start:x}"
+        assert end == (sec.addr + sec.size) or self._sym.is_global(end, True), \
+            f"Expected symbol at {start:x}"
+ 
         return '\n'.join(
             self._disasm_symbol(sec, addr, inline, hashable, referenced)
             for addr in addrs
