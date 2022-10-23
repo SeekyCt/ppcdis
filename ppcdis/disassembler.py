@@ -535,9 +535,15 @@ class Disassembler:
 
         self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
 
+        # TODO: only mkw should need these, add flag & assert otherwise?
+
         # DEVKITPPC r40+ can give issues with slices not starting with symbols
         if not self._sym.is_global(sl.start, miss_ok=True):
             self._sym.create_slice_label(sl.start, section.type == SectionType.TEXT)
+
+        # Symbol based disassembly needs one at the end
+        if not self._sym.is_global(sl.end, miss_ok=True):
+            self._sym.create_slice_label(sl.end, section.type == SectionType.TEXT)
 
         return (
             ".include \"macros.inc\"\n\n" +
