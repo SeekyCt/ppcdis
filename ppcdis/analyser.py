@@ -1220,6 +1220,9 @@ class Analyser:
             if rci is not None:
                 finish = rci
 
+        # Create a function at the start if it doesn't exist
+        self._lab.notify_tag(section.addr, LabelTag.CALL)
+
         # Iterate over full section
         addr = section.addr
         while addr != finish:
