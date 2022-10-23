@@ -140,6 +140,7 @@ class SymbolGetter:
         self._bin = binary
 
         self._sym: Dict[int, Symbol] = {}
+        self._addrs = []
 
         # Load user symbols
         # TODO: rel offsets?
@@ -159,25 +160,24 @@ class SymbolGetter:
         for addr, t in self._lab.get_types():
             if t == LabelType.FUNCTION:
                 name = symbols.get(addr, f"{binary.func_prefix}{addr:x}")
-                self._sym[addr] = Symbol(name, True)
+                self._add_sym(addr, name, True)
             elif t == LabelType.LABEL:
                 # Labels shouldn't be named, suggests analysis missed function
                 if addr in symbols:
                     named_labels.append(f"  0x{addr:x}: FUNCTION # {symbols[addr]}")
-                self._sym[addr] = Symbol(f"{binary.label_prefix}{addr:x}", False)
+                self._add_sym(addr, f"{binary.label_prefix}{addr:x}", False)
             elif t == LabelType.DATA:
                 name = symbols.get(addr, f"{binary.data_prefix}{addr:x}")
-                self._sym[addr] = Symbol(name, True)
+                self._add_sym(addr, name, True)
             elif t == LabelType.JUMPTABLE:
                 # Jumptables shouldn't be named
                 assert addr not in symbols, (
                     f"Tried to rename jumptable {addr:x} ({symbols[addr]}). "
                     "If this isn't a jumptable, please report this"
                 )
-                self._sym[addr] = Symbol(f"jtbl_{addr:x}", True)
+                self._add_sym(addr, f"jtbl_{addr:x}", True)
             else:
                 assert 0, f"{addr:x} has invalid type {t}"
-        self._addrs = sorted(addr for addr, sym in self._sym.items() if sym.global_scope == True)
 
         assert len(named_labels) == 0, (
             f"Tried to name some symbols that were detected as labels. You may want to add these "
@@ -187,10 +187,23 @@ class SymbolGetter:
 
         # Add entry points
         for addr, name in binary.get_entries():
-            self._sym[addr] = Symbol(name, True)
+            self._add_sym(addr, name, True)
 
         # Init jumptable target labels
         self._jt_targets = set()
+    
+    def _add_sym(self, addr: int, name: str, global_scope: bool):
+        """Adds a symbol at an address"""
+
+        self._sym[addr] = Symbol(name, global_scope)
+
+        if global_scope:
+            # Get position
+            idx = bisect_left(self._addrs, addr)
+
+            # Add if not already in position
+            if idx == len(self._addrs) or self._addrs[idx] != addr:
+                self._addrs.insert(idx, addr)
 
     def get_name(self, addr: int, hash_mode=False, miss_ok=False) -> str:
         """Checks the name of the symbol at an address
@@ -266,10 +279,14 @@ class SymbolGetter:
 
         return ret
     
-    def create_slice_label(self, addr: int):
+    def create_slice_label(self, addr: int, is_text: bool):
         """Creates a dummy symbol for the start of a slice"""
 
-        self._sym[addr] = Symbol(f"slicedummy_{addr:x}", True)
+        # Create symbol
+        self._add_sym(addr, f"slicedummy_{addr:x}", True)
+
+        # Create internal label
+        self._lab.set_type(addr, LabelType.FUNCTION if is_text else LabelType.DATA)
     
     def reset_hash_naming(self):
         self._hash_names = {}

@@ -532,7 +532,7 @@ class Disassembler:
 
         # DEVKITPPC r40+ can give issues with slices not starting with symbols
         if self._sym.get_name(sl.start, miss_ok=True) is None:
-            self._sym.create_slice_label(sl.start)
+            self._sym.create_slice_label(sl.start, section.type == SectionType.TEXT)
 
         return (
             ".include \"macros.inc\"\n\n" +
