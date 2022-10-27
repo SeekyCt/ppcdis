@@ -232,7 +232,7 @@ class Labeller:
         assert 0, f"No known tags {addr:x} {tags}"
 
     def output(self, path: str):
-        """Outputs all labelled addresses and their types to json"""
+        """Outputs all labelled addresses and their types to a pickle"""
 
         labels = LabelManager()
 
@@ -312,7 +312,7 @@ class Relocator:
         return self._jt[addr]
 
     def output(self, path: str):
-        """Dumps all relocations and jumptables to json"""
+        """Dumps all relocations and jumptables to a pickle"""
 
         # Convert relocations to dictionaries
         references = {}
