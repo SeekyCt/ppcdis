@@ -35,7 +35,6 @@ class AnalysisOverrideManager(OverrideManager):
         self._sdata_sizes = self._make_size_ranges(yml.get("sdata_sizes", []))
         self._forced_types = yml.get("forced_types", {})
         self._forced_upper_lowers = yml.get("forced_upper_lowers", {})
-        self._mid_function_entries = set(yml.get("mid_function_entries", []))
 
     def is_blocked_pointer(self, addr: int) -> bool:
         """Checks if the potential pointer at an address is a known false positive"""
@@ -75,11 +74,6 @@ class AnalysisOverrideManager(OverrideManager):
     def get_forced_upper_lowers(self) -> List[Dict]:
         
         return self._forced_upper_lowers
-
-    def is_mid_function_entry(self, addr: int) -> bool:
-        """Checks if an address is a mid-function entrypoint (in handwritten asm)"""
-
-        return addr in self._mid_function_entries
         
 @unique
 class LabelTag(Enum):
@@ -139,19 +133,33 @@ class Labeller:
             for path in extra_label_paths:
                 for addr, t in LabelManager(path).get_types():
                     if binary.addr_is_local(addr):
-                        if t in (LabelType.FUNCTION, LabelType.ENTRY):
+                        if t == LabelType.FUNCTION:
+                            self.notify_tag(addr, LabelTag.CALL)
+                        elif t == LabelType.ENTRY:
+                            self.notify_tag(addr, LabelTag.ENTRY)
                             self.notify_tag(addr, LabelTag.CALL)
                         elif t == LabelType.DATA:
                             self.notify_tag(addr, LabelTag.DATA)
                         else:
                             assert 0, f"Unexpected external label type {t} at {addr:x}"
 
+        # Apply tags for forced types, these don't need to guarantee the type
+        # since it's forced again later
+        # TODO: should that change?
+        for addr, t in self._ovr.get_forced_types():
+            if t == LabelType.FUNCTION:
+                self.notify_tag(addr, LabelTag.CALL)
+            elif t == LabelType.LABEL:
+                self.notify_tag(addr, LabelTag.CONDITIONAL)
+            elif t == LabelType.DATA:
+                self.notify_tag(addr, LabelTag.DATA)
+            elif t == LabelType.JUMPTABLE:
+                self.notify_tag(addr, LabelTag.JUMPTABLE)
+            elif t == LabelType.ENTRY:
+                self.notify_tag(addr, LabelTag.ENTRY)
+
     def _commit_function(self, addr: int):
         """Registers an address in the function list for boundary calculations"""
-
-        # Ignore if marked as a mid-function entry point
-        if self._ovr.is_mid_function_entry(addr):
-            return
 
         # Get position
         idx = bisect_left(self._f, addr)
@@ -167,7 +175,7 @@ class Labeller:
         tags = self._tags[addr]
 
         # Add to sorted functions list if needed
-        if tag == LabelTag.CALL and LabelTag.CALL not in tags:
+        if tag == LabelTag.CALL and LabelTag.CALL not in tags and LabelTag.ENTRY not in tags:
             self._commit_function(addr)
 
         # Register tag
@@ -202,15 +210,15 @@ class Labeller:
                 continue
             
             # If not given JUMP, PTR implies function
-            if LabelTag.PTR in tags:
-                self._commit_function(addr)            
+            if LabelTag.PTR in tags and not LabelTag.ENTRY in tags:
+                self._commit_function(addr)
 
     def _eval_tags(self, addr: int, tags: Set[LabelTag]
                   ) -> str:
         """Decides the type of a label from its tags"""
 
-        # Trust override for mid function entry
-        if self._ovr.is_mid_function_entry(addr):
+        # ENTRY is always a mid-function entry
+        if LabelTag.ENTRY in tags:
             return LabelType.ENTRY
 
         # CALL will always be a function, if not mid-function entry
