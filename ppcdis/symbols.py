@@ -15,6 +15,9 @@ class LabelType:
     LABEL = "LABEL"
     DATA = "DATA"
     JUMPTABLE = "JUMPTABLE"
+    ENTRY = "ENTRY"
+
+UNSIZED_TYPES = (LabelType.LABEL, LabelType.ENTRY)
 
 LABELS_PICKLE_VERSION = 2
 
@@ -80,7 +83,7 @@ class LabelManager:
         # Sort addresses for size calculation
         self._size_addrs = sorted([
             addr for addr, t in self._labels.items()
-            if t != LabelType.LABEL
+            if t not in UNSIZED_TYPES
         ])
 
         # Add section ends
@@ -96,7 +99,7 @@ class LabelManager:
         if self._size_addrs is None:
             self._calc_sizes()
 
-        assert self._labels[addr] != LabelType.LABEL, f"Tried to get size of label {addr:x}"
+        assert self._labels[addr] not in UNSIZED_TYPES, f"Tried to get size of label {addr:x}"
         return self._size_addrs[bisect_right(self._size_addrs, addr)] - addr
 
     def get_sizes(self) -> Dict[int, int]:
@@ -108,7 +111,7 @@ class LabelManager:
         return {
             addr : self._size_addrs[bisect_right(self._size_addrs, addr)] - addr
             for addr, t in self._labels.items()
-            if t != LabelType.LABEL
+            if t not in UNSIZED_TYPES
         }
 
 @dataclass
@@ -145,7 +148,8 @@ class SymbolGetter:
         self._bin = binary
 
         self._sym: Dict[int, Symbol] = {}
-        self._addrs = []
+        self._bound_addrs = []
+        self._mid_function_entries = set()
 
         # Load user symbols
         # TODO: rel offsets?
@@ -163,24 +167,26 @@ class SymbolGetter:
         self._lab = LabelManager(labels_path, binary)
         named_labels = []
         for addr, t in self._lab.get_types():
-            if t == LabelType.FUNCTION:
+            if t in (LabelType.FUNCTION, LabelType.ENTRY):
                 name = symbols.get(addr, f"{binary.func_prefix}{addr:x}")
-                self._add_sym(addr, name, True)
+                if t == LabelType.ENTRY:
+                    self._mid_function_entries.add(addr)
+                self._add_sym(addr, name, True, t == LabelType.FUNCTION)
             elif t == LabelType.LABEL:
                 # Labels shouldn't be named, suggests analysis missed function
                 if addr in symbols:
                     named_labels.append(f"  0x{addr:x}: FUNCTION # {symbols[addr]}")
-                self._add_sym(addr, f"{binary.label_prefix}{addr:x}", False)
+                self._add_sym(addr, f"{binary.label_prefix}{addr:x}", False, False)
             elif t == LabelType.DATA:
                 name = symbols.get(addr, f"{binary.data_prefix}{addr:x}")
-                self._add_sym(addr, name, True)
+                self._add_sym(addr, name, True, True)
             elif t == LabelType.JUMPTABLE:
                 # Jumptables shouldn't be named
                 assert addr not in symbols, (
                     f"Tried to rename jumptable {addr:x} ({symbols[addr]}). "
                     "If this isn't a jumptable, please report this"
                 )
-                self._add_sym(addr, f"jtbl_{addr:x}", True)
+                self._add_sym(addr, f"jtbl_{addr:x}", True, True)
             else:
                 assert 0, f"{addr:x} has invalid type {t}"
 
@@ -192,23 +198,24 @@ class SymbolGetter:
 
         # Add entry points
         for addr, name in binary.get_entries():
-            self._add_sym(addr, name, True)
+            self._add_sym(addr, name, True, True)
 
         # Init jumptable target labels
         self._jt_targets = set()
     
-    def _add_sym(self, addr: int, name: str, global_scope: bool):
+    def _add_sym(self, addr: int, name: str, global_scope: bool, bounded: bool):
         """Adds a symbol at an address"""
 
         self._sym[addr] = Symbol(name, global_scope)
 
-        if global_scope:
+        # Add to bound list
+        if bounded:
             # Get position
-            idx = bisect_left(self._addrs, addr)
+            idx = bisect_left(self._bound_addrs, addr)
 
             # Add if not already in position
-            if idx == len(self._addrs) or self._addrs[idx] != addr:
-                self._addrs.insert(idx, addr)
+            if idx == len(self._bound_addrs) or self._bound_addrs[idx] != addr:
+                self._bound_addrs.insert(idx, addr)
 
     def get_name(self, addr: int, hash_mode=False, miss_ok=False) -> str:
         """Checks the name of the symbol at an address
@@ -270,19 +277,20 @@ class SymbolGetter:
         """Returns the start and end addresses of the function containing an address"""
 
         sec = self._bin.find_section_containing(instr_addr)
-        return get_containing_symbol(self._addrs, instr_addr, sec)
+        return get_containing_symbol(self._bound_addrs, instr_addr, sec)
     
     def get_globals_in_range(self, start: int, end: int) -> List[int]:
-        """Returns the start addresses of the functions/data in a range (no labels)"""
+        """Returns the start addresses of the functions/data in a range (no labels or mid-function
+        entries)"""
 
         # Find first symbol after start
-        idx = bisect_left(self._addrs, start)
+        idx = bisect_left(self._bound_addrs, start)
 
         # Add functions until end is reached
         # TODO: bisect + slice?
         ret = []
-        while idx < len(self._addrs) and self._addrs[idx] < end:
-            ret.append(self._addrs[idx])
+        while idx < len(self._bound_addrs) and self._bound_addrs[idx] < end:
+            ret.append(self._bound_addrs[idx])
             idx += 1
 
         return ret
@@ -291,7 +299,7 @@ class SymbolGetter:
         """Creates a dummy symbol for the start of a slice"""
 
         # Create symbol
-        self._add_sym(addr, f"slicedummy_{addr:x}", True)
+        self._add_sym(addr, f"slicedummy_{addr:x}", True, True)
 
         # Create internal label
         self._lab.set_type(addr, LabelType.FUNCTION if is_text else LabelType.DATA)
@@ -304,6 +312,11 @@ class SymbolGetter:
             self._hash_names[addr] = f"s_{len(self._hash_names)}"
 
         return self._hash_names[addr]
+    
+    def is_mid_function_entry(self, addr: int):
+        """Checks if an address is a mid-function entrypoint (in handwritten asm)"""
+
+        return addr in self._mid_function_entries
 
 def get_containing_symbol(functions: List[int], instr_addr: int, sec: BinarySection
                            ) -> Tuple[int, int]:

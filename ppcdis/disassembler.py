@@ -161,9 +161,20 @@ class DisasmLine:
         # Add symbol name if required
         prefix = []
         name = sym.get_name(self.instr.address, hashable, True)
-        if name is not None and not sym.is_global(self.instr.address):
-            prefix.append(f"{name}:")
-        
+        if name is not None:
+            if sym.is_global(self.instr.address):
+                # Globals other than mid function entries should already be labelled
+                if sym.is_mid_function_entry(self.instr.address):
+                    if inline:
+                        prefix.append(f"entry {name}")
+                        if referenced is not None:
+                            referenced.notify(self.instr.address, jump)
+                    else:
+                        prefix.append(f".global {name}")
+                        prefix.append(f"{name}:")
+            else:
+                prefix.append(f"{name}:")
+
         # Add jumptable label if required
         # .global affects branch hints, so a new label is created for this
         # TODO: generate symbol names for this in hashable?

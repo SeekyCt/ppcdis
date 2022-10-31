@@ -35,6 +35,7 @@ class AnalysisOverrideManager(OverrideManager):
         self._sdata_sizes = self._make_size_ranges(yml.get("sdata_sizes", []))
         self._forced_types = yml.get("forced_types", {})
         self._forced_upper_lowers = yml.get("forced_upper_lowers", {})
+        self._mid_function_entries = set(yml.get("mid_function_entries", []))
 
     def is_blocked_pointer(self, addr: int) -> bool:
         """Checks if the potential pointer at an address is a known false positive"""
@@ -74,13 +75,18 @@ class AnalysisOverrideManager(OverrideManager):
     def get_forced_upper_lowers(self) -> List[Dict]:
         
         return self._forced_upper_lowers
+
+    def is_mid_function_entry(self, addr: int) -> bool:
+        """Checks if an address is a mid-function entrypoint (in handwritten asm)"""
+
+        return addr in self._mid_function_entries
         
 @unique
 class LabelTag(Enum):
     """Properties of a label at an address"""
 
     # Target of a bl, a b out of the binary, or a pointer from asm targetting a text section
-    # Definite function
+    # Definite function (including mid-function entry)
     CALL = 0
 
     # Target of a b
@@ -110,6 +116,9 @@ class LabelTag(Enum):
     # Data or jumptable (defaults to jumptable)
     DATA = 6
 
+    # Mid function entry point (in handwritten asm)
+    ENTRY = 7
+
 class Labeller:
     """Class to handle label creation and lookup"""
 
@@ -130,7 +139,7 @@ class Labeller:
             for path in extra_label_paths:
                 for addr, t in LabelManager(path).get_types():
                     if binary.addr_is_local(addr):
-                        if t == LabelType.FUNCTION:
+                        if t in (LabelType.FUNCTION, LabelType.ENTRY):
                             self.notify_tag(addr, LabelTag.CALL)
                         elif t == LabelType.DATA:
                             self.notify_tag(addr, LabelTag.DATA)
@@ -139,6 +148,10 @@ class Labeller:
 
     def _commit_function(self, addr: int):
         """Registers an address in the function list for boundary calculations"""
+
+        # Ignore if marked as a mid-function entry point
+        if self._ovr.is_mid_function_entry(addr):
+            return
 
         # Get position
         idx = bisect_left(self._f, addr)
@@ -196,7 +209,11 @@ class Labeller:
                   ) -> str:
         """Decides the type of a label from its tags"""
 
-        # CALL will always be a function
+        # Trust override for mid function entry
+        if self._ovr.is_mid_function_entry(addr):
+            return LabelType.ENTRY
+
+        # CALL will always be a function, if not mid-function entry
         if LabelTag.CALL in tags:
             return LabelType.FUNCTION
         
