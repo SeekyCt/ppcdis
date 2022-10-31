@@ -168,7 +168,7 @@ class DisasmLine:
                     if inline:
                         prefix.append(f"entry {name}")
                         if referenced is not None:
-                            referenced.notify(self.instr.address, jump)
+                            referenced.notify(self.instr.address, name)
                     else:
                         prefix.append(f".global {name}")
                         prefix.append(f"{name}:")
