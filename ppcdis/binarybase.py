@@ -220,21 +220,21 @@ class BinaryReader(ABC):
         # Not found
         return None
 
-    def validate_addr(self, addr: int, local_only=False) -> bool:
-        """Checks if an address is a meaningful place to be pointed to"""
+    def validate_reloc(self, addr: int, target: int, local_only=False) -> bool:
+        """Checks if a pointer relocation from an address seems possible"""
 
         # Check if local
-        sec = self.find_section_containing(addr, True)
+        sec = self.find_section_containing(target, True)
         if sec is None:
             # Check if in any extern if allowed
             if not local_only:
-                return any(ext.validate_addr(addr, True) for ext in self._externs)
+                return any(ext.validate_reloc(addr, target, True) for ext in self._externs)
             else:
                 return False
         elif sec.type == SectionType.TEXT:
             # Text addresses will be 4-byte aligned
             # TODO: LECT code might not follow this
-            return addr & 3 == 0
+            return target & 3 == 0
         else:
             # Valid data address
             return True

@@ -377,3 +377,11 @@ class RelReader(BinaryReader):
         assert rel.module_id not in self._rels, f"Duplicate module id {rel.module_id}"
         self._rels[rel.module_id] = rel
         self._externs.append(rel)
+
+    def validate_reloc(self, addr: int, target: int, local_only=False) -> bool:
+        """Override to only accept relocations if they're listed in the rel"""
+
+        return (
+            super().validate_reloc(addr, target, local_only) and
+            (addr in self.addr_relocs or addr + 2 in self.addr_relocs)
+        )

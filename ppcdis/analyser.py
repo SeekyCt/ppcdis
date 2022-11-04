@@ -617,7 +617,7 @@ class Analyser:
         """Processes a word of data"""
         
         # Treat as pointer if it's to a valid address
-        if self._bin.validate_addr(val) and not self._ovr.is_blocked(addr, val):
+        if self._bin.validate_reloc(addr, val) and not self._ovr.is_blocked(addr, val):
             # Create label if it doesn't exist
             self._lab.notify_tag(val, LabelTag.PTR)
 
@@ -789,7 +789,7 @@ class Analyser:
 
                 # Check for addresses outside any binary and known false positives
                 # Valid addresses outside binaries wouldn't shift anyway
-                if not self._bin.validate_addr(sym_addr) or self._ovr.is_blocked(addr, sym_addr):
+                if not self._bin.validate_reloc(addr, sym_addr) or self._ovr.is_blocked(addr, sym_addr):
                     # tprint(f"Ignored fixed address at {uppers[reg].instr.address:x}/{addr:x}")
                     del uppers[reg]
                 else:
