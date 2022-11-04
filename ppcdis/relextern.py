@@ -10,7 +10,7 @@ from .symbols import LabelManager, LabelType
 from .analyser import AnalysisOverrideManager
 
 def label_rel_externs(dest: LabelManager, rel: RelReader):
-    for rlc in rel.relocs:
+    for rlc in rel.ordered_relocs:
         # Skip local relocs
         if rlc.target_module == rel.module_id:
             continue
