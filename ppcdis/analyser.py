@@ -4,8 +4,7 @@ Analyser for initial project creation
 
 from bisect import bisect_left
 from collections import defaultdict
-from dataclasses import dataclass
-from enum import Enum, IntEnum, unique
+from enum import Enum, unique
 from typing import Dict, List, Set, Tuple
 
 from capstone import CsInsn
@@ -19,6 +18,7 @@ from .fileutil import dump_to_pickle
 from .instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,
                        algebraicReferencingInsns, returnBranchInsns)
 from .overrides import OverrideManager
+from .relocs import Reloc, RelocType
 from .symbols import LabelManager, LabelType, get_containing_symbol
 
 class AnalysisOverrideManager(OverrideManager):
@@ -272,45 +272,6 @@ class Labeller:
 
         # Output
         labels.output(path)
-
-@unique
-class RelocType(IntEnum):
-    """Types of action a relocation can perform"""
-
-    NORMAL = 0 # @h, @l, or raw pointer in data
-    ALGEBRAIC = 1 # @ha
-    SDA = 2 # @sda21
-    # Branches don't need to be recorded, they're clear at disassembly anyway
-
-@dataclass
-class Reloc:
-    """Class to store a relocation on a single word"""
-
-    t: RelocType
-    target: int
-    offs: int
-
-    def format_offs(self) -> str:
-        """Gets the text representation of the offset"""
-
-        # Handle sign
-        if self.offs > 0:
-            sign = '+'
-        elif self.offs < 0:
-            sign = '-'
-        else:
-            # Don't write any offset if 0
-            return ""
-
-        # Handle magnitude
-        offs = abs(self.offs)
-        if offs >= 10:
-            return sign + hex(offs)
-        else:
-            return sign + str(offs)
-    
-    def __repr__(self):
-        return f"Reloc({self.t}, 0x{self.target:x}, 0x{self.offs:x})"
 
 class Relocator:
     """Class to handle relocation creation"""

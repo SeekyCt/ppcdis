@@ -5,12 +5,12 @@ Disassembler for assembly code (re)generation
 from dataclasses import dataclass
 from hashlib import sha1
 import json
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Set, Tuple
 
 import capstone
 from capstone.ppc import *
 
-from .analyser import Reloc, RelocType
+from .analyser import RelocType
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarylect import LECTReader
 from .csutil import DummyInstr, sign_half, cs_disasm 
@@ -18,8 +18,8 @@ from .instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns,
                        signExtendInsns, storeLoadInsns, renamedInsns)
 from .overrides import OverrideManager
 from .slices import Slice
+from .relocs import RelocGetter
 from .symbols import SymbolGetter, has_bad_chars, is_mangled
-from .fileutil import load_from_pickle
 
 class DisassemblyOverrideManager(OverrideManager):
     """Disassembly category OverrideManager"""
@@ -48,73 +48,6 @@ class DisassemblyOverrideManager(OverrideManager):
         """Checks if terminating zeros should be removed from .ctors disassembly"""
 
         return self._trim_dtors
-
-class RelocGetter:
-    """Class to handle relocation lookup"""
-
-    def __init__(self, binary: BinaryReader, sym: SymbolGetter, reloc_path: str):
-        # Backup binary reference
-        self._bin = binary
-
-        # Load from file
-        dat = load_from_pickle(reloc_path)
-
-        # Parse references
-        self._refs = {}
-        for addr, ref in dat["references"].items():
-            self._refs[addr] = Reloc(RelocType(ref["type"]), ref["target"], ref["offset"])
-
-        # Parse jump tables
-        self._jt_sizes = {}
-        self._jt = {}
-        for addr, jt in dat["jumptables"].items():
-            # Save size
-            self._jt_sizes[addr] = jt["size"]
-
-            # Get all jumps
-            entries = binary.read_word_array(addr, jt["size"] // 4)
-
-            # Update dicts
-            for i, target in enumerate(entries):
-                # Create reloc for jump table entry
-                self._jt[addr + i * 4] = addr
-
-                # Create target label
-                sym.notify_jt_target(target)
-    
-    def get_jumptable_size(self, addr: int) -> int:
-        """Gets the size of a jumptable in bytes, or None if it's not known"""
-
-        return self._jt_sizes.get(addr)
-
-    def get_reference_at(self, addr: int) -> Reloc:
-        """Checks the reference info from an address, if any"""
-
-        return self._refs.get(addr)
-    
-    def check_jt_at(self, addr: int) -> bool:
-        """Returns whether an address is in a jump table"""
-
-        return addr in self._jt
-    
-    def get_containing_jumptable(self, addr: int) -> int:
-        """Returns the address of the jumptable containing an address"""
-
-        return self._jt[addr]
-
-    def get_referencing_jumptables(self, start: int, end: int) -> List[int]:
-        """Gets the jumptables referencing a function"""
-
-        ret = []
-        for addr in self._jt_sizes:
-            # Get first target
-            target = self._bin.read_word(addr)
-
-            # Save if referencing this function
-            if start <= target < end:
-                ret.append(addr)
-        
-        return ret
 
 class ReferencedTracker:
     """Tracker for symbols referenced by a portion of assembly (for forward declarations)"""
