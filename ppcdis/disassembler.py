@@ -629,6 +629,35 @@ class Disassembler:
                 + '\n'
             )
     
+    ###############
+    # C Functions #
+    ###############
+
+    def make_function_skeletons(self, start: int, end: int) -> str:
+        # Init output
+        ret = []
+
+        # Get functions
+        funcs = self._sym.get_globals_in_range(start, end)
+
+        for addr in funcs:
+            # Get size of function
+            size = self._sym.get_size(addr)
+
+            # Add jumptable includes before
+            for jt in self._rlc.get_referencing_jumptables(addr, addr + size):
+                ret.append(f"#include \"jumptable/{jt:x}.inc\"")
+
+            # Output function dummy
+            name = self._sym.get_name(addr)
+            ret.append(f"asm UNKNOWN_FUNCTION({name})\n{{\n    #include \"asm/{addr:x}.s\"\n}}\n")
+
+        return '\n'.join(ret)
+    
+    def output_skeleton(self, path: str, start: int, end: int):
+        with open(path, 'w') as f:
+            f.write(self.make_function_skeletons(start, end))
+
     ##########
     # C Data #
     ##########

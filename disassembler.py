@@ -31,17 +31,19 @@ if __name__ == "__main__":
     parser.add_argument("-q", "--quiet", action="store_true", help="Don't print log")
     parser.add_argument("--no-addr", action="store_true",
                         help="For --hash, don't include addresses in output file")
+    parser.add_argument("--skeleton", type=hex_int, nargs='+',
+                        help="Generate a source file skeleton (give start & end)")
     args = parser.parse_args()
 
-    incompatibles = (args.slice, args.function, args.jumptable, args.hash)
+    incompatibles = (args.slice, args.function, args.jumptable, args.hash, args.skeleton)
     if len(incompatibles) - (incompatibles.count(None) + incompatibles.count(False)) > 1:
-        assert 0, "Invalid combination of --slice, --function, --jumptable and --hash"
+        assert 0, "Invalid combination of --slice, --function, --jumptable, --hash and --skeleton"
     if args.inline:
-        assert args.function is not None, "Inline mode can only be used with --function"
+        assert args.function, "Inline mode can only be used with --function"
         assert not args.extra, "Inline mode can't be used with --extra"
     if args.source_name is not None:
-        assert args.function is not None or args.jumptable is not None, \
-            "Source name can only be used with --function or --jumptable"
+        assert args.function or args.jumptable or args.skeleton, \
+            "Source name can only be used with --function, --jumptable or --skeleton"
     if args.no_addr:
         assert args.hash, "No addr can only be used with hash mode"
 
@@ -68,6 +70,10 @@ if __name__ == "__main__":
     elif args.hash:
         assert len(args.output_paths) == 1, "--hash only takes 1 output"
         dis.output_hashes(args.output_paths[0], args.no_addr)
+    elif args.skeleton:
+        assert len(args.output_paths) == 1, "--skeleton only takes 1 output"
+        assert len(args.skeleton) == 2, "--skeleton takes 2 arguments, start & end"
+        dis.output_skeleton(args.output_paths[0], *args.skeleton)
     else:
         assert len(args.output_paths) == 1, "Full disassembly only takes 1 output"
         dis.output(args.output_paths[0])
