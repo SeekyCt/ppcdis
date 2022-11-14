@@ -719,10 +719,10 @@ class Disassembler:
 
         return txt, referenced.get_referenced()
 
-    def data_to_text(self, addr: int) -> str:
+    def data_to_text(self, addr: int, width=4) -> str:
         """Outputs a single data symbol as a C u32 array (or u8 if required)"""
 
-        txt, _ = self.data_to_text_with_referenced(addr)
+        txt, _ = self.data_to_text_with_referenced(addr, width)
 
         return txt
 
@@ -788,6 +788,23 @@ class Disassembler:
         )
 
         return '\n'.join((decl, txt))
+
+    def make_data_dummies(self, start: int, end: int, width=8) -> str:
+        # Init output
+        ret = []
+
+        # Get symbols
+        funcs = self._sym.get_globals_in_range(start, end)
+
+        # Output data dummies
+        for addr in funcs:
+            ret.append(self.data_to_text(addr, width))
+
+        return '\n'.join(ret)
+    
+    def output_data_dummies(self, path: str, start: int, end: int, width=8):
+        with open(path, 'w') as f:
+            f.write(self.make_data_dummies(start, end, width))
 
     ###########
     # Hashing #

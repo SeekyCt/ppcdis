@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--symbol-map-path", type=str, help="Symbol map input path")
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
     parser.add_argument("-s", "--slice", type=hex_int, nargs='+',
-                        help="Disassemble a slice (give start & end)")
+                        help="Disassemble slices (give start & end pairs)")
     parser.add_argument("-j", "--jumptable", type=hex_int, nargs='+',
                         help="Generate jumptable workarounds (give starts)")
     parser.add_argument("-f", "--function", type=hex_int, nargs='+',
@@ -33,6 +33,8 @@ if __name__ == "__main__":
                         help="For --hash, don't include addresses in output file")
     parser.add_argument("--skeleton", type=hex_int, nargs='+',
                         help="Generate a source file skeleton (give start & end)")
+    parser.add_argument("-d", "--data-dummy", type=hex_int, nargs='+',
+                        help="Generate source data dummmies (give start & end pairs)")
     args = parser.parse_args()
 
     incompatibles = (args.slice, args.function, args.jumptable, args.hash, args.skeleton)
@@ -42,8 +44,8 @@ if __name__ == "__main__":
         assert args.function, "Inline mode can only be used with --function"
         assert not args.extra, "Inline mode can't be used with --extra"
     if args.source_name is not None:
-        assert args.function or args.jumptable or args.skeleton, \
-            "Source name can only be used with --function, --jumptable or --skeleton"
+        assert any((args.function, args.jumptable, args.skeleton, args.data_dummy)), \
+            "Source name can only be used with --function, --jumptable, --data-dummy or --skeleton"
     if args.no_addr:
         assert args.hash, "No addr can only be used with hash mode"
 
@@ -52,7 +54,7 @@ if __name__ == "__main__":
     dis = Disassembler(binary, args.labels_path, args.relocs_path, args.symbol_map_path,
                        args.overrides, args.source_name, args.quiet)
     if args.slice is not None:
-        assert len(args.slice) % 2 == 0, "Missisng slice end address"
+        assert len(args.slice) % 2 == 0, "Missisg slice end address"
         assert len(args.slice) // 2 == len(args.output_paths), \
             "Number of slices must equal number of output paths"
         for path, start, end in zip(args.output_paths, *[iter(args.slice)]*2):
@@ -74,6 +76,12 @@ if __name__ == "__main__":
         assert len(args.output_paths) == 1, "--skeleton only takes 1 output"
         assert len(args.skeleton) == 2, "--skeleton takes 2 arguments, start & end"
         dis.output_skeleton(args.output_paths[0], *args.skeleton)
+    elif args.data_dummy is not None:
+        assert len(args.data_dummy) % 2 == 0, "Missing data dummy end address"
+        assert len(args.data_dummy) // 2 == len(args.output_paths), \
+            "Number of slices must equal number of output paths"
+        for path, start, end in zip(args.output_paths, *[iter(args.data_dummy)]*2):
+            dis.output_data_dummies(path, start, end)
     else:
         assert len(args.output_paths) == 1, "Full disassembly only takes 1 output"
         dis.output(args.output_paths[0])
