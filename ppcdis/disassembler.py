@@ -809,27 +809,23 @@ class Disassembler:
 
     def output_skeleton(self, path: str, src: Source, include_data=False):
         # Initialise output
-        out = []
+        text_out = []
+        data_out = []
 
-        TEXT_SECTIONS = [".init", ".text"]
+        # Add sections
+        for sec_name, sl in src.slices.items():
+            # Get section
+            sec = self._bin.get_section_by_name(sec_name)
 
-        # Add data
-        if include_data:
-            for sec, sl in src.slices.items():
-                if sec in TEXT_SECTIONS:
-                    continue
-                out.append(f"// {sec}")
-                out.append(self.make_data_dummies(sl.start, sl.end))
-
-        # Add text sections
-        for sec in TEXT_SECTIONS:
-            if sec not in src.slices:
-                continue
-            sl = src.slices[sec]
-            out.append(self.make_function_skeletons(sl.start, sl.end))
+            # Check type
+            if sec.type == SectionType.TEXT:
+                text_out.append(self.make_function_skeletons(sl.start, sl.end))
+            elif include_data:
+                data_out.append(f"// {sec_name}")
+                data_out.append(self.make_data_dummies(sl.start, sl.end))
 
         with open(path, 'w') as f:
-            f.write('\n\n'.join(out))
+            f.write('\n\n'.join(data_out + text_out))
 
     ###########
     # Hashing #
