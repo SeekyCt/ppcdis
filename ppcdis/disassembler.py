@@ -658,7 +658,8 @@ class Disassembler:
     # C Data #
     ##########
 
-    def data_to_text_with_referenced(self, addr: int, width=4) -> Tuple[str, Set[Tuple[int, str]]]:
+    def data_to_text_with_referenced(self, addr: int, width=4, const=False) -> \
+        Tuple[str, Set[Tuple[int, str]]]:
 
         self._print(f"Disassemble data {addr:x}")
 
@@ -677,6 +678,10 @@ class Disassembler:
         else:
             unit = 4
             t = "u32"
+
+        # Add const if needed
+        if const:
+            t = f"const {t}"
         
         # Disassemble values
         referenced = ReferencedTracker()
@@ -715,10 +720,10 @@ class Disassembler:
 
         return txt, referenced.get_referenced()
 
-    def data_to_text(self, addr: int, width=4) -> str:
+    def data_to_text(self, addr: int, width=4, const=False) -> str:
         """Outputs a single data symbol as a C u32 array (or u8 if required)"""
 
-        txt, _ = self.data_to_text_with_referenced(addr, width)
+        txt, _ = self.data_to_text_with_referenced(addr, width, const)
 
         return txt
 
@@ -785,7 +790,7 @@ class Disassembler:
 
         return '\n'.join((decl, txt))
 
-    def make_data_dummies(self, start: int, end: int, width=8) -> str:
+    def make_data_dummies(self, start: int, end: int, width=8, const=False) -> str:
         # Init output
         ret = []
 
@@ -794,7 +799,7 @@ class Disassembler:
 
         # Output data dummies
         for addr in funcs:
-            ret.append(self.data_to_text(addr, width))
+            ret.append(self.data_to_text(addr, width, const))
 
         return '\n'.join(ret)
     
@@ -807,7 +812,7 @@ class Disassembler:
     # Source File Skeletons # 
     #########################
 
-    def output_skeleton(self, path: str, src: Source, include_data=False):
+    def output_skeleton(self, path: str, src: Source, include_data=False, width=8):
         # Initialise output
         text_out = []
         data_out = []
@@ -822,7 +827,9 @@ class Disassembler:
                 text_out.append(self.make_function_skeletons(sl.start, sl.end))
             elif include_data:
                 data_out.append(f"// {sec_name}")
-                data_out.append(self.make_data_dummies(sl.start, sl.end))
+                # TODO: make this a BinarySection property or something
+                const = sec_name in (".rodata", ".sdata2", ".sbss2")
+                data_out.append(self.make_data_dummies(sl.start, sl.end, width, const))
 
         with open(path, 'w') as f:
             f.write('\n\n'.join(data_out + text_out))
