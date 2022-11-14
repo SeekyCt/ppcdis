@@ -17,7 +17,7 @@ from .csutil import DummyInstr, sign_half, cs_disasm
 from .instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
                        signExtendInsns, storeLoadInsns, renamedInsns)
 from .overrides import OverrideManager
-from .slices import Slice
+from .slices import Slice, Source
 from .relocs import RelocGetter
 from .symbols import SymbolGetter, has_bad_chars, is_mangled
 
@@ -653,10 +653,6 @@ class Disassembler:
             ret.append(f"asm UNKNOWN_FUNCTION({name})\n{{\n    #include \"asm/{addr:x}.s\"\n}}\n")
 
         return '\n'.join(ret)
-    
-    def output_skeleton(self, path: str, start: int, end: int):
-        with open(path, 'w') as f:
-            f.write(self.make_function_skeletons(start, end))
 
     ##########
     # C Data #
@@ -697,7 +693,7 @@ class Disassembler:
                     referenced.notify(ref.target, name)
                 else:
                     # Output raw value otherwise
-                    val = hex(self._bin.read_word(p))
+                    val = f"{self._bin.read_word(p):#010x}"
             else:
                 # Warn if ignoring references
                 ref = self._rlc.get_reference_at(p)
@@ -705,7 +701,7 @@ class Disassembler:
                     print(f"Warning: reference to {ref.target:x} at {addr:x} ignored, "
                             "data is split below word alignment")
 
-                val = hex(self._bin.read_byte(p))
+                val = f"{self._bin.read_byte(p):#04x}"
 
             vals.append(val)
 
@@ -805,6 +801,35 @@ class Disassembler:
     def output_data_dummies(self, path: str, start: int, end: int, width=8):
         with open(path, 'w') as f:
             f.write(self.make_data_dummies(start, end, width))
+
+    
+    #########################
+    # Source File Skeletons # 
+    #########################
+
+    def output_skeleton(self, path: str, src: Source, include_data=False):
+        # Initialise output
+        out = []
+
+        TEXT_SECTIONS = [".init", ".text"]
+
+        # Add data
+        if include_data:
+            for sec, sl in src.slices.items():
+                if sec in TEXT_SECTIONS:
+                    continue
+                out.append(f"// {sec}")
+                out.append(self.make_data_dummies(sl.start, sl.end))
+
+        # Add text sections
+        for sec in TEXT_SECTIONS:
+            if sec not in src.slices:
+                continue
+            sl = src.slices[sec]
+            out.append(self.make_function_skeletons(sl.start, sl.end))
+
+        with open(path, 'w') as f:
+            f.write('\n\n'.join(out))
 
     ###########
     # Hashing #
