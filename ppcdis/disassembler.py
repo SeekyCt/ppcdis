@@ -856,7 +856,7 @@ class Disassembler:
         else:
             end = section.addr + section.size
         
-        funcs = self._sym.get_functions_in_range(section.addr, end)
+        funcs = self._sym.get_globals_in_range(section.addr, end)
 
         if not no_addrs:
             return json.dumps(
