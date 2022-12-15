@@ -32,6 +32,7 @@ class DisassemblyOverrideManager(OverrideManager):
         self._global_manual_floats = yml.get("global_manual_floats", False)
         self._trim_ctors = yml.get("trim_ctors", False)
         self._trim_dtors = yml.get("trim_dtors", False)
+        self._symbol_aligns = yml.get("symbol_aligns", {})
 
     def is_manual_sdata2(self, addr: int):
         """Checks if the symbol at an address should be made relative to r2 for manual handling
@@ -48,6 +49,11 @@ class DisassemblyOverrideManager(OverrideManager):
         """Checks if terminating zeros should be removed from .ctors disassembly"""
 
         return self._trim_dtors
+    
+    def get_symbol_align(self, addr: int):
+        """Gets the alignment a symbol should have, or 0 if none"""
+
+        return self._symbol_aligns.get(addr, 0)
 
 class ReferencedTracker:
     """Tracker for symbols referenced by a portion of assembly (for forward declarations)"""
@@ -434,13 +440,18 @@ class Disassembler:
                        referenced=None) -> str:
         """Disassembles a single symbol of assembly or data"""
 
+        # Add align if required
+        alignment = self._ovr.get_symbol_align(addr)
+        align = f".balign {alignment}\n" if alignment != 0 else ""
+
         # Add .global and symbol name if required
         name = self._sym.get_name(addr, hashable, True)
         assert name is not None and self._sym.is_global(addr)
         if inline:
             prefix = "nofralloc\n" if sec.type == SectionType.TEXT else ""
         else:
-            prefix = f"\n.global {name}\n{name}:\n"
+            prefix = f"\n.global {name}\n{align}{name}:\n"
+
         if sec.type == SectionType.TEXT:
             return prefix + self._disasm_function(addr, inline, hashable, referenced)
         else:
