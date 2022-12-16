@@ -173,7 +173,7 @@ When given `--function addr`, the disassembler outputs the assembly of a single 
 
 When given `--extra` with `--function`, extra data referenced by the function is included. This is currently limited to jumptables.
 
-### Inline function generation
+#### Inline function generation
 
 When given `--inline` with `--function`, the disassembler outputs the assembly of a single function in mwcc inline assembly format, for use on undecompiled functions in partially decompiled files.
 
