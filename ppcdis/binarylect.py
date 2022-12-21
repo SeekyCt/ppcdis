@@ -4,10 +4,11 @@ Binary reader for REL files
 
 from dataclasses import dataclass
 from enum import IntEnum, unique
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
-from .binarybase import BinaryReader, BinarySection, SectionDef, SectionType
+from .binarybase import BinaryReader, BinarySection, BuiltinSymbol, SectionDef, SectionType
 from .binaryrel import RelReader
+from .symbols import LabelType
 
 @unique
 class LECTOffs(IntEnum):
@@ -52,10 +53,10 @@ class LECTReader(BinaryReader):
             for i, d in enumerate(self._section_defs)
         ]
 
-    def get_entries(self) -> List[Tuple[int, str]]:
-        """Returns all entry functions"""
+    def get_builtin_symbols(self) -> List[BuiltinSymbol]:
+        """Returns all built-in symbols"""
 
-        return [(self.read_word(LECTOffs.ENTRY, True), "lect_main")]
+        return [BuiltinSymbol(self.read_word(LECTOffs.ENTRY, True), "lect_main", LabelType.FUNCTION)]
     
     def _get_external_binaries(self) -> List[BinaryReader]:
         """Returns the external dol if given"""

@@ -151,9 +151,14 @@ class SymbolGetter:
         self._bound_addrs = []
         self._mid_function_entries = set()
 
-        # Load user symbols
-        # TODO: rel offsets?
         symbols = {}
+
+        # Add built-in names
+        for sym in binary.get_builtin_symbols():
+            symbols[sym.addr] = sym.name
+
+        # Add user symbols
+        # TODO: rel offsets?
         if symbols_path is not None:
             yml = load_from_yaml(symbols_path)
             for key, val in yml.get("global", {}).items():
@@ -195,10 +200,6 @@ class SymbolGetter:
             "analysis overrides if they're actually functions:\n\n"
             "forced_types:\n" + '\n'.join(named_labels) + '\n'
         )
-
-        # Add entry points
-        for addr, name in binary.get_entries():
-            self._add_sym(addr, name, True, True)
 
         # Init jumptable target labels
         self._jt_targets = set()

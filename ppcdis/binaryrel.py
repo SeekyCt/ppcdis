@@ -7,9 +7,10 @@ from enum import IntEnum, unique
 from struct import pack
 from typing import Dict, List, Tuple
 
-from .binarybase import BinaryReader, BinarySection, SectionDef, SectionType
+from .binarybase import BinaryReader, BinarySection, BuiltinSymbol, SectionDef, SectionType
 from .binarydol import DolReader
 from .fileutil import load_from_yaml_str
+from .symbols import LabelType
 
 @unique
 class RelOffs(IntEnum):
@@ -317,24 +318,27 @@ class RelReader(BinaryReader):
 
         return ret
 
-    def get_entries(self) -> List[Tuple[int, str]]:
-        """Returns all entry functions"""
+    def get_builtin_symbols(self) -> List[BuiltinSymbol]:
+        """Returns all built-in symbols"""
 
         return [
-            (
+            BuiltinSymbol(
                 self._rel_sections[self.read_byte(RelOffs.PROLOG_SECTION, True)].addr
                 + self.read_word(RelOffs.PROLOG, True),
-                "_prolog"
+                "_prolog",
+                LabelType.FUNCTION
             ),
-            (
+            BuiltinSymbol(
                 self._rel_sections[self.read_byte(RelOffs.EPILOG_SECTION, True)].addr
                 + self.read_word(RelOffs.EPILOG, True),
-                "_epilog"
+                "_epilog",
+                LabelType.FUNCTION
             ),
-            (
+            BuiltinSymbol(
                 self._rel_sections[self.read_byte(RelOffs.UNRESOLVED_SECTION, True)].addr
                 + self.read_word(RelOffs.UNRESOLVED, True),
-                "_unresolved"
+                "_unresolved",
+                LabelType.FUNCTION
             ),
         ]
     

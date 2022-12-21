@@ -10,10 +10,19 @@ from hashlib import sha1
 import os
 from struct import unpack
 from sys import stderr
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 # Dummy offset used to indicate a read from a bss section
 OFFS_BSS = -1
+
+@dataclass
+class BuiltinSymbol:
+    """A symbol built-in to the binary"""
+
+    addr: int
+    name: str
+    t: str
+    emit: bool = True
 
 @unique
 class SectionType(Enum):
@@ -186,8 +195,8 @@ class BinaryReader(ABC):
         return []
     
     @abstractmethod
-    def get_entries(self) -> List[Tuple[int, str]]:
-        """Returns all entry functions"""
+    def get_builtin_symbols(self) -> List[BuiltinSymbol]:
+        """Returns all built-in symbols"""
 
         raise NotImplementedError
 

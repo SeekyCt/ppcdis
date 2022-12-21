@@ -2,10 +2,11 @@
 Binary reader for DOL files
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
-from .binarybase import BinaryReader, BinarySection, SectionDef, SectionType
+from .binarybase import BinaryReader, BinarySection, BuiltinSymbol, SectionDef, SectionType
 from .fileutil import load_from_yaml_str
+from .symbols import LabelType
 
 default_section_defs = load_from_yaml_str("""
 text:
@@ -170,11 +171,29 @@ class DolReader(BinaryReader):
 
         return sections_with_bss
 
-    def get_entries(self) -> List[Tuple[int, str]]:
-        """Returns all entry functions"""
+    def get_builtin_symbols(self) -> List[BuiltinSymbol]:
+        """Returns all built-in symbols"""
+
+        # TODO: stack addr, sda bases, heap addrs
+
+        # Init output        
+        ret = []
         
-        return [(self.read_word(OFFS_ENTRY, True), "__start")]
-    
+        # Add entrypoint
+        ret.append(BuiltinSymbol(self.read_word(OFFS_ENTRY, True), "__start", LabelType.FUNCTION))
+
+        # Try add ctors
+        ctors = self.get_section_by_name(".ctors")
+        if ctors is not None:
+            ret.append(BuiltinSymbol(ctors.addr, "_ctors", LabelType.DATA, False))
+
+        # Try add dtors
+        dtors = self.get_section_by_name(".dtors")
+        if dtors is not None:
+            ret.append(BuiltinSymbol(dtors.addr, "_dtors", LabelType.DATA, False))
+
+        return ret
+        
     def get_rom_copy_info(self) -> int:
         """Gets the start address of the rom copy info in the .init section
         None if not found / irrelevant for this binary"""

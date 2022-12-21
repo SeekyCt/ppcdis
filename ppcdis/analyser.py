@@ -147,16 +147,7 @@ class Labeller:
         # since it's forced again later
         # TODO: should that change?
         for addr, t in self._ovr.get_forced_types():
-            if t == LabelType.FUNCTION:
-                self.notify_tag(addr, LabelTag.CALL)
-            elif t == LabelType.LABEL:
-                self.notify_tag(addr, LabelTag.CONDITIONAL)
-            elif t == LabelType.DATA:
-                self.notify_tag(addr, LabelTag.DATA)
-            elif t == LabelType.JUMPTABLE:
-                self.notify_tag(addr, LabelTag.JUMPTABLE)
-            elif t == LabelType.ENTRY:
-                self.notify_tag(addr, LabelTag.ENTRY)
+            self.notify_type(addr, t)
 
     def _commit_function(self, addr: int):
         """Registers an address in the function list for boundary calculations"""
@@ -180,6 +171,24 @@ class Labeller:
 
         # Register tag
         tags.add(tag)
+
+    def notify_type(self, addr: int, t: LabelType):
+        """Registers a label type for an address"""
+
+        # Convert to a tag
+        if t == LabelType.FUNCTION:
+            tag = LabelTag.CALL
+        elif t == LabelType.LABEL:
+            tag = LabelTag.CONDITIONAL
+        elif t == LabelType.DATA:
+            tag = LabelTag.DATA
+        elif t == LabelType.JUMPTABLE:
+            tag = LabelTag.JUMPTABLE
+        elif t == LabelType.ENTRY:
+            tag = LabelTag.ENTRY
+
+        # Add tag
+        self.notify_tag(addr, tag)
 
     def check_tagged(self, addr: int) -> bool:
         """Checks if any label tags have been added to an address"""
@@ -399,9 +408,9 @@ class Analyser:
         self._sda = {} # queue of sda references to check, maps r2/r13 use addresses to their targets
         self._jt_guide = {} # backup for _postprocess_control_flow, maps bctr addresses to their jumptables
 
-        # Tag entry points as bl targets
-        for addr, _ in self._bin.get_entries():
-            self._lab.notify_tag(addr, LabelTag.CALL)
+        # Add builtin symbols
+        for sym in self._bin.get_builtin_symbols():
+            self._lab.notify_type(sym.addr, sym.t)
 
         # Analyse
 
