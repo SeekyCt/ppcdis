@@ -450,12 +450,21 @@ class Disassembler:
         if inline:
             prefix = "nofralloc\n" if sec.type == SectionType.TEXT else ""
         else:
-            prefix = f"\n.global {name}\n{align}{name}:\n"
-
+            if sec.name == ".ctors" or sec.name == ".dtors":
+                sym_type_dir = ""
+                suffix = ""
+            else:
+                sym_type = "@function" if sec.type == SectionType.TEXT else "@object"
+                sym_type_dir = f"\n.type {name}, {sym_type}"
+                
+                suffix = f"\n.size {name}, .-{name}\n"
+                
+            prefix = f"\n.global {name}{sym_type_dir}\n{align}{name}:\n"
+        
         if sec.type == SectionType.TEXT:
-            return prefix + self._disasm_function(addr, inline, hashable, referenced)
+            return prefix + self._disasm_function(addr, inline, hashable, referenced) + suffix
         else:
-            return prefix + self._disasm_data(sec, addr)
+            return prefix + self._disasm_data(sec, addr) + suffix
 
     def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
                       hashable=False, referenced=None) -> str:
