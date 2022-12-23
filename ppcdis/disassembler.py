@@ -447,12 +447,14 @@ class Disassembler:
         # Add .global and symbol name if required
         name = self._sym.get_name(addr, hashable, True)
         assert name is not None and self._sym.is_global(addr)
+        
+        suffix = ""
+        
         if inline:
             prefix = "nofralloc\n" if sec.type == SectionType.TEXT else ""
         else:
             if sec.name == ".ctors" or sec.name == ".dtors":
                 sym_type_dir = ""
-                suffix = ""
             else:
                 sym_type = "@function" if sec.type == SectionType.TEXT else "@object"
                 sym_type_dir = f"\n.type {name}, {sym_type}"
