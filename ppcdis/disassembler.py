@@ -457,7 +457,7 @@ class Disassembler:
                 sym_type = "@function" if sec.type == SectionType.TEXT else "@object"
                 sym_type_dir = f"\n.type {name}, {sym_type}"
                 
-                suffix = f"\n.size {name}, .-{name}\n"
+                suffix = f"\n.size {name}, . - {name}\n"
                 
             prefix = f"\n.global {name}{sym_type_dir}\n{align}{name}:\n"
         
