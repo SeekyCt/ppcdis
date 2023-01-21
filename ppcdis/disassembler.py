@@ -34,23 +34,23 @@ class DisassemblyOverrideManager(OverrideManager):
         self._trim_dtors = yml.get("trim_dtors", False)
         self._symbol_aligns = yml.get("symbol_aligns", {})
 
-    def is_manual_sdata2(self, addr: int):
+    def is_manual_sdata2(self, addr: int) -> bool:
         """Checks if the symbol at an address should be made relative to r2 for manual handling
         in inline assembly"""
 
         return self._global_manual_floats or self._check_range(self._manual_float_ranges, addr)
     
-    def should_trim_ctors(self):
+    def should_trim_ctors(self) -> bool:
         """Checks if terminating zeros should be removed from .ctors disassembly"""
 
         return self._trim_ctors
 
-    def should_trim_dtors(self):
+    def should_trim_dtors(self) -> bool:
         """Checks if terminating zeros should be removed from .ctors disassembly"""
 
         return self._trim_dtors
     
-    def get_symbol_align(self, addr: int):
+    def get_symbol_align(self, addr: int) -> int:
         """Gets the alignment a symbol should have, or 0 if none"""
 
         return self._symbol_aligns.get(addr, 0)
