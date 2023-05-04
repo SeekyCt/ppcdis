@@ -176,7 +176,7 @@ class BinaryReader(ABC):
 
     @abstractmethod
     def _get_sections(self) -> List[BinarySection]:
-        """Finds the sections in a binary"""
+        """Finds the sections in a binary, in ascending order of address"""
 
         raise NotImplementedError
     

@@ -315,6 +315,10 @@ class RelReader(BinaryReader):
         assert text_n == len(text_defs), "Too many text sections defined"
         assert data_n == len(data_defs), "Too many data sections defined"
 
+        # This method of iterating over the sections doesn't guarantee that bss is in the
+        # right position for the list to be sorted by address
+        ret.sort(key=lambda s: s.addr)
+
         return ret
 
     def get_entries(self) -> List[Tuple[int, str]]:
