@@ -609,11 +609,13 @@ class Analyser:
         if sec.type == SectionType.TEXT:
             for _, instr in self._disasm[sec.name].items():
                 self._analyse_instr(instr)
-        elif sec.type == SectionType.DATA:
-            for p in range(sec.addr, sec.addr + sec.size, 4):
-                self._analyse_data(p, self._bin.read_word(p))
-        else: # section.type == SectionType.BSS:
-            pass
+        else: # DATA, BSS
+            # Create label at section start
+            self._lab.notify_tag(sec.addr, LabelTag.DATA)
+
+            if sec.type == SectionType.DATA:
+                for p in range(sec.addr, sec.addr + sec.size, 4):
+                    self._analyse_data(p, self._bin.read_word(p))
     
     def _read_jt_target(self, jt_addr: int, offs: int) -> int:
         """Reads the target address of a jumptable entry"""
@@ -1207,6 +1209,7 @@ class Analyser:
                 finish = rci
 
         # Create a function at the start if it doesn't exist
+        # TODO: move to _analyse_section?
         self._lab.notify_tag(section.addr, LabelTag.CALL)
 
         # Iterate over full section
