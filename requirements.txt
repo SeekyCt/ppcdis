@@ -1,5 +1,5 @@
 colorama
-capstone
+capstone==4.0.2
 pyelftools
 pylibyaml
 PyYAML
