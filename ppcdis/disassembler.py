@@ -635,6 +635,7 @@ class Disassembler:
 
         return (
             section.get_start_text() +
+            section.get_balign_text() +
             self._disasm_range(section, section.addr, section.addr + section.size)
         )
 
