@@ -469,10 +469,10 @@ class Disassembler:
             return prefix + self._disasm_data(sec, addr) + suffix
 
     def _disasm_range(self, sec: BinarySection, start: int, end: int, inline=False,
-                      hashable=False, referenced=None) -> str:
+                      hashable=False, referenced=None, strict_slices=True) -> str:
         """Disassembles a range of assembly or data"""
 
-        sec.assert_slice_bounds(start, end)
+        sec.assert_slice_bounds(start, end, strict_slices)
         assert start < end, f"Start address {start:x} after end address {end:x}" 
         assert sec.addr <= start < end <= sec.addr + sec.size, \
             f"Disassembly {start:x}-{end:x} crosses bounds of section {sec.name}"
@@ -496,7 +496,7 @@ class Disassembler:
     # Slices #
     ##########
 
-    def slice_to_text(self, section: BinarySection, sl: Slice) -> str:
+    def slice_to_text(self, section: BinarySection, sl: Slice, strict_slices=True) -> str:
         """Outputs the disassembly of a slice to text"""
 
         self._print(f"Disassemble slice {sl.start:x}-{sl.end:x}")
@@ -514,12 +514,12 @@ class Disassembler:
         return (
             ".include \"macros.inc\"\n\n" +
             section.get_start_text() +
-            section.get_balign_text() +
-            self._disasm_range(section, sl.start, sl.end) +
+            section.get_balign_text(sl.start) +
+            self._disasm_range(section, sl.start, sl.end, strict_slices=strict_slices) +
             "\n"
         )
     
-    def output_slice(self, path: str, start: int, end: int):
+    def output_slice(self, path: str, start: int, end: int, strict_slices=True):
         """Outputs a slice's disassembly to a file"""
 
         # Make slice
@@ -527,7 +527,7 @@ class Disassembler:
         sl = Slice(start, end, section.name)
 
         with open(path, 'w') as f:
-            f.write(self.slice_to_text(section, sl))
+            f.write(self.slice_to_text(section, sl, strict_slices))
 
     #############
     # Functions #

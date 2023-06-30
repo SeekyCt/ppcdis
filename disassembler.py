@@ -33,6 +33,8 @@ if __name__ == "__main__":
                         help="For --hash, don't include addresses in output file")
     parser.add_argument("-d", "--data-dummy", type=hex_int, nargs='+',
                         help="Generate source data dummmies (give start & end pairs)")
+    parser.add_argument("--no-strict-slices", action="store_true",
+                        help="Allow slices which don't match balign")
     args = parser.parse_args()
 
     incompatibles = (args.slice, args.function, args.jumptable, args.hash)
@@ -46,6 +48,8 @@ if __name__ == "__main__":
             "Source name can only be used with --function, --jumptable or --data-dummy"
     if args.no_addr:
         assert args.hash, "No addr can only be used with hash mode"
+    if args.no_strict_slices:
+        assert args.slice, "No strict slices can only be used with slice mode"
 
     binary = load_binary_yml(args.binary_path)
 
@@ -56,7 +60,7 @@ if __name__ == "__main__":
         assert len(args.slice) // 2 == len(args.output_paths), \
             "Number of slices must equal number of output paths"
         for path, start, end in zip(args.output_paths, *[iter(args.slice)]*2):
-            dis.output_slice(path, start, end)
+            dis.output_slice(path, start, end, not args.no_strict_slices)
     elif args.function is not None:
         assert len(args.function) == len(args.output_paths), \
             "Number of function addresses must equal number of output paths"
