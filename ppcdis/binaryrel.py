@@ -265,6 +265,7 @@ class RelReader(BinaryReader):
         ret = []
         text_n = 0
         data_n = 0
+        bss_sec = None
         for i, offs in enumerate(range(
             sections_offset,
             sections_offset + RelSize.SECTION_ENTRY * section_count,
@@ -282,10 +283,10 @@ class RelReader(BinaryReader):
                     continue
 
                 # BSS section
-                sec = RelBinarySection(i, ".bss", SectionType.BSS, 0, self._bss_addr, bss_size,
+                bss_sec = RelBinarySection(i, ".bss", SectionType.BSS, 0, self._bss_addr, bss_size,
                                        bss_def.attr, bss_def.nobits, bss_def.balign)
-                ret.append(sec)
-                self._rel_sections.append(sec)
+                ret.append(bss_sec)
+                self._rel_sections.append(bss_sec)
             else:
                 if sec_offs & 1:
                     # Text Section
@@ -314,6 +315,18 @@ class RelReader(BinaryReader):
 
         assert text_n == len(text_defs), "Too many text sections defined"
         assert data_n == len(data_defs), "Too many data sections defined"
+
+        # Check the bss address given doesn't overlap any other sections
+        if bss_sec is not None:
+            for sec in ret:
+                if sec == bss_sec:
+                    continue
+                
+                sec_end = sec.addr + sec.size
+                bss_end = bss_sec.addr + bss_sec.size
+                assert not (sec.addr <= bss_sec.addr < sec_end) and \
+                       not (sec.addr <= bss_end < sec_end), \
+                       f"Bss section {bss_sec.addr:x} overlaps {sec.name}"
 
         # This method of iterating over the sections doesn't guarantee that bss is in the
         # right position for the list to be sorted by address
