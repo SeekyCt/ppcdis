@@ -625,13 +625,13 @@ class Analyser:
         else:
             return self._bin.read_word(jt_addr + offs)
 
-    def _jump_table_bound_esitmate(self, func_start: int, func_end: int, jt_addr: int
-                                  ) -> Tuple[Set[int], int]:
+    def _jump_table_bound_esitmate(self, func_start: int, func_end: int, jt_addr: int,
+                                   jt_section: BinarySection) -> Tuple[Set[int], int]:
         """Returns the destinations and potential max size of a jumptable"""
 
         offs = 0
         dests = set()
-        while True:
+        while jt_addr + offs < jt_section.addr + jt_section.size:
             jump = self._read_jt_target(jt_addr, offs)            
 
             # Check if jump destination is valid and no other label splits the table here
@@ -1112,7 +1112,8 @@ class Analyser:
             section, addr, uppers, visited, jumptables, changed_r13, changed_r2 = self._jt[jt]
 
             func_start, func_end = self._lab.get_containing_function(addr)
-            dests, max_size = self._jump_table_bound_esitmate(func_start, func_end, jt)
+            jt_section = self._bin.find_section_containing(jt)
+            dests, max_size = self._jump_table_bound_esitmate(func_start, func_end, jt, jt_section)
 
             # Check destinations start immediately after the bctr
             if addr + 4 in dests:
@@ -1137,7 +1138,8 @@ class Analyser:
                         # Function boundaries may have changed / data labels may have been added
                         # that would improve the bounds estimate
                         func_start, func_end = self._lab.get_containing_function(addr)
-                        dests, max_size = self._jump_table_bound_esitmate(func_start, func_end, jt)
+                        dests, max_size = self._jump_table_bound_esitmate(func_start, func_end, jt,
+                                                                          jt_section)
                         assert offs < max_size, f"Jumptable split itself earlier {jt:x}"
                         assert addr + 4 in dests, f"{jt:x} removed first case"
 
