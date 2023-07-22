@@ -10,12 +10,7 @@ import re
 from .binarybase import BinaryReader, BinarySection
 from .fileutil import dump_to_pickle, load_from_pickle, load_from_yaml
 
-class LabelType:
-    FUNCTION = "FUNCTION"
-    LABEL = "LABEL"
-    DATA = "DATA"
-    JUMPTABLE = "JUMPTABLE"
-    ENTRY = "ENTRY"
+from .labelinfo_pb2 import LabelInfo, LabelType, Label
 
 UNSIZED_TYPES = (LabelType.LABEL, LabelType.ENTRY)
 
@@ -25,19 +20,33 @@ class LabelManager:
     """Lower Level Symbol Handling"""
 
     def __init__(self, path=None, binary=None):
+        self._labels = {}
         if path is not None:
+            """
             dat = load_from_pickle(path)
             assert dat.get("version") == LABELS_PICKLE_VERSION, \
                 f"Outdated labels pickle {path}, try a clean & rebuild"
             self._labels = dat["labels"]
-        else:
-            self._labels = {}
+            """
+
+            _label_proto = LabelInfo()
+            with open(path, "rb") as fd:
+                _label_proto.ParseFromString(fd.read())
+            for addr in _label_proto.labels:
+                self._labels[addr] = _label_proto.labels[addr].type
+
         self._size_addrs = None
         self._binary = binary
     
     def output(self, path: str):
         """Saves all labels to a pickle"""
 
+        _label_proto = LabelInfo()
+        for addr in self._labels:
+            _label_proto.labels[addr].type = self._labels[addr]
+        with open(path, "wb") as fd:
+            fd.write(_label_proto.SerializeToString())
+        """
         dump_to_pickle(
             path, 
             {
@@ -45,8 +54,9 @@ class LabelManager:
                 "labels" : self._labels
             }
         )
+        """
 
-    def set_type(self, addr: int, t: str):
+    def set_type(self, addr: int, t: LabelType):
         """Sets the type of the label at an address
         
         Creates the label if it doesn't exist"""
@@ -56,16 +66,19 @@ class LabelManager:
             idx = bisect_left(self._size_addrs, addr)
             self._size_addrs.insert(idx, addr)
 
+        if not addr in self._labels:
+            self._labels[addr] = Label()
+
         self._labels[addr] = t
 
-    def get_type(self, addr: int) -> str:
+    def get_type(self, addr: int) -> LabelType:
         """Gets the type of the label at an address
         
         Expects it to exist"""
 
         return self._labels[addr]
 
-    def get_types(self) -> List[Tuple[int, str]]:
+    def get_types(self) -> List[Tuple[int, LabelType]]:
         """Gets the address and type of all existing labels"""
 
         return self._labels.items()

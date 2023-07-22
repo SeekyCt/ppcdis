@@ -10,6 +10,19 @@ See [TOOLS.md](TOOLS.md) for information on each tool. (Documentation is current
 
 See the [Super Paper Mario Decompilation](https://github.com/SeekyCt/spm-decomp) for an example of a project using these tools.
 
+## Building locally
+Building this repository requires the existence of a `protoc` executable (protobuf compiler). To create wheel and source distributions:
+```
+pip install build
+python -m build -s -w
+```
+
+To create editable installs, you currently have to manually invoke proto first (idk enough python to make stetuptools automatically do this).
+```
+protoc -Iproto --python_out=ppcdis proto/labelinfo.proto
+protoc -Iproto --python_out=ppcdis proto/relocinfo.proto
+```
+
 ## APIs
 
 - The main API for these tools is the command line API

@@ -19,7 +19,8 @@ from .instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadIn
                        algebraicReferencingInsns, returnBranchInsns)
 from .overrides import OverrideManager
 from .relocs import Reloc, RelocType
-from .symbols import LabelManager, LabelType, get_containing_symbol
+from .symbols import LabelManager, get_containing_symbol
+from .labelinfo_pb2 import LabelType
 
 class AnalysisOverrideManager(OverrideManager):
     """Analysis category OverrideManager"""

@@ -1,0 +1,19 @@
+
+syntax = "proto3";
+
+enum LabelType {
+  NOTYPE = 0;    // STT_NOTYPE
+  DATA = 1;      // STT_OBJECT
+  FUNCTION = 2;  // STT_FUNC
+  LABEL = 3;
+  JUMPTABLE = 4;
+  ENTRY = 5;
+}
+
+message Label {
+  LabelType type = 1;
+}
+
+message LabelInfo {
+  map<uint32, Label> labels = 1;
+}
