@@ -10,6 +10,8 @@ from .binarybase import BinaryReader
 from .fileutil import load_from_pickle
 from .symbols import SymbolGetter
 
+from .relocinfo_pb2 import RelocInfo
+
 @unique
 class RelocType(IntEnum):
     """Types of action a relocation can perform"""
@@ -57,22 +59,22 @@ class RelocGetter:
         self._bin = binary
 
         # Load from file
-        dat = load_from_pickle(reloc_path)
+        _reloc_proto = RelocInfo()
+        with open(reloc_path, "rb") as fd:
+            _reloc_proto.ParseFromString(fd.read())
 
-        # Parse references
         self._refs = {}
-        for addr, ref in dat["references"].items():
-            self._refs[addr] = Reloc(RelocType(ref["type"]), ref["target"], ref["offset"])
+        for addr, ref in _reloc_proto.relocs.items():
+            self._refs[addr] = Reloc(RelocType(ref.type - 1), ref.target, ref.offset)
 
-        # Parse jump tables
-        self._jt_sizes = {}
         self._jt = {}
-        for addr, jt in dat["jumptables"].items():
+        self._jt_sizes = {}
+        for addr, jt in _reloc_proto.jumptables.items():
             # Save size
-            self._jt_sizes[addr] = jt["size"]
+            self._jt_sizes[addr] = jt.size
 
             # Get all jumps
-            entries = binary.read_word_array(addr, jt["size"] // 4)
+            entries = binary.read_word_array(addr, jt.size // 4)
 
             # Update dicts
             for i, target in enumerate(entries):
@@ -81,6 +83,7 @@ class RelocGetter:
 
                 # Create target label
                 sym.notify_jt_target(target)
+
     
     def get_jumptable_size(self, addr: int) -> int:
         """Gets the size of a jumptable in bytes, or None if it's not known"""

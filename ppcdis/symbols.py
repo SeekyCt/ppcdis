@@ -22,13 +22,6 @@ class LabelManager:
     def __init__(self, path=None, binary=None):
         self._labels = {}
         if path is not None:
-            """
-            dat = load_from_pickle(path)
-            assert dat.get("version") == LABELS_PICKLE_VERSION, \
-                f"Outdated labels pickle {path}, try a clean & rebuild"
-            self._labels = dat["labels"]
-            """
-
             _label_proto = LabelInfo()
             with open(path, "rb") as fd:
                 _label_proto.ParseFromString(fd.read())
@@ -40,21 +33,20 @@ class LabelManager:
     
     def output(self, path: str):
         """Saves all labels to a pickle"""
+        if self._binary is not None:
+            addr_size_map = self.get_sizes()
 
         _label_proto = LabelInfo()
-        for addr in self._labels:
-            _label_proto.labels[addr].type = self._labels[addr]
+        if self._binary is not None:
+            for addr in self._labels:
+                _label_proto.labels[addr].type = self._labels[addr]
+                if self._labels[addr] not in UNSIZED_TYPES:
+                    _label_proto.labels[addr].size = addr_size_map[addr]
+        else:
+            for addr in self._labels:
+                _label_proto.labels[addr].type = self._labels[addr]
         with open(path, "wb") as fd:
             fd.write(_label_proto.SerializeToString())
-        """
-        dump_to_pickle(
-            path, 
-            {
-                "version" : LABELS_PICKLE_VERSION,
-                "labels" : self._labels
-            }
-        )
-        """
 
     def set_type(self, addr: int, t: LabelType):
         """Sets the type of the label at an address

@@ -22,6 +22,9 @@ from .relocs import Reloc, RelocType
 from .symbols import LabelManager, get_containing_symbol
 from .labelinfo_pb2 import LabelType
 
+from .labelinfo_pb2 import LabelType
+from .relocinfo_pb2 import RelocInfo
+
 class AnalysisOverrideManager(OverrideManager):
     """Analysis category OverrideManager"""
 
@@ -260,7 +263,7 @@ class Labeller:
     def output(self, path: str):
         """Outputs all labelled addresses and their types to a pickle"""
 
-        labels = LabelManager()
+        labels = LabelManager(binary=self._bin)
 
         # Get types from tags
         for addr, tags in self._tags.items():
@@ -302,27 +305,17 @@ class Relocator:
         """Dumps all relocations and jumptables to a pickle"""
 
         # Convert relocations to dictionaries
-        references = {}
+        _reloc_proto = RelocInfo()
         for addr, reloc in self._rlc.items():
-            references[addr] = {
-                "type" : int(reloc.t),
-                "target" : reloc.target,
-                "offset" : reloc.offs,
-            }
+            _reloc_proto.relocs[addr].type = int(reloc.t) + 1
+            _reloc_proto.relocs[addr].target = reloc.target
+            _reloc_proto.relocs[addr].offset = reloc.offs
 
-        # Convert jumptables to dictionaries        
-        jumptables = {}
         for addr, size in self._jt.items():
-            jumptables[addr] = {
-                "size": size
-            }
-        
-        # Merge into one file and output
-        out = {
-            "references" : references,
-            "jumptables" : jumptables
-        }
-        dump_to_pickle(path, out)
+            _reloc_proto.jumptables[addr].size = size
+
+        with open(path, "wb") as fd:
+            fd.write(_reloc_proto.SerializeToString())
 
 class UpperHandler:
     """Class to handle an upper reference and its lowers"""

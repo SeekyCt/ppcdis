@@ -1,6 +1,8 @@
 
 syntax = "proto3";
 
+package ppcdis;
+
 enum LabelType {
   NOTYPE = 0;    // STT_NOTYPE
   DATA = 1;      // STT_OBJECT
@@ -12,6 +14,7 @@ enum LabelType {
 
 message Label {
   LabelType type = 1;
+  uint32 size = 2;
 }
 
 message LabelInfo {

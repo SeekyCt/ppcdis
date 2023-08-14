@@ -74,7 +74,7 @@ setup(
         "License :: OSI Approved :: MIT License"
     ],
     packages=["ppcdis"],
-    scripts=["analyser.py"],
+    scripts=["analyser.py", "disassembler.py"],
     python_requires=">=3.8",
     install_requires=[
         'colorama',
