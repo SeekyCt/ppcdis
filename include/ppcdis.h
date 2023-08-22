@@ -44,7 +44,9 @@ void __dummy_pointer(const void *);
 
 // Unfortunately these don't work on older compilers
 
-#if __MWERKS__ >= 0x4199
+#define HAVE_PRAGMA_PUSH (__MWERKS__ >= 0x4199)
+
+#if HAVE_PRAGMA_PUSH
 
 // Disable deadstripping for a region
 
@@ -59,6 +61,12 @@ void __dummy_pointer(const void *);
     DUMMY_POINTER(name) \
     FORCEACTIVE_END
 
+#define HAVE_FORCEACTIVE 1
+
+#else
+
+#define HAVE_FORCEACTIVE 0
+
 #endif
 
 // Rel symbol definition
@@ -71,10 +79,21 @@ typedef struct
     const void * ref;
 } __RelSymbolDef;
 
+#if HAVE_FORCEACTIVE
+
 #define REL_SYMBOL_AT(name, addr) \
     __declspec(section "relsymdef") __RelSymbolDef rel_sym_##name = \
     {addr, (const void *)&name}; \
     FORCEACTIVE_DATA(rel_sym_##name)
+
+#else
+
+// May need manual forceactive pragmas if stripping is enabled on the rel
+#define REL_SYMBOL_AT(name, addr) \
+    __declspec(section "relsymdef") __RelSymbolDef rel_sym_##name = \
+    {addr, (const void *)&name};
+
+#endif
 
 // BSS ordering hack
 
