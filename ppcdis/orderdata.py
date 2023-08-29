@@ -98,7 +98,7 @@ def order_strings(binary: BinaryReader, start_addr: int, end_addr: int, pool=Fal
             "REL_SYMBOL_AT({lab}, 0x{addr:x})"
         ))
     else:
-        fmt = "char {lab}[] : 0x{addr:x}{sda};"
+        fmt = "extern char {lab}[] : 0x{addr:x}{sda};"
     matching_at = '\n'.join([
         fmt.format(lab=f"{binary.data_prefix}{addr:x}", addr=addr, sda=sda)
         for addr in addrs
