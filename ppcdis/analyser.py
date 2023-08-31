@@ -13,10 +13,10 @@ from capstone.ppc import *
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarydol import DolReader
 from .binarylect import LECTReader
-from .csutil import DummyInstr, check_overwrites, cs_disasm, sign_half
+from .csutil import DummyInstr, check_overwrites, cs_disasm, get_lis_ha, get_mem_l, sign_half
 from .fileutil import dump_to_pickle
 from .instrcats import (labelledBranchInsns, upperInsns, lowerInsns, storeLoadInsns,
-                       algebraicReferencingInsns, returnBranchInsns)
+                       algebraicReferencingInsns, returnBranchInsns, bcVariantInsns)
 from .overrides import OverrideManager
 from .relocs import Reloc, RelocType
 from .symbols import LabelManager, LabelType, get_containing_symbol
@@ -336,7 +336,7 @@ class UpperHandler:
     def calc_target(self, lower: int) -> int:
         """Calculates the address referenced by the upper + a lower"""
 
-        return (self.instr.operands[1].imm << 16) + lower
+        return (get_lis_ha(self.instr) << 16) + lower
 
     def get_reloc_type(self):
         """Gets the relocation type of the upper instruction (@h vs @ha)"""
@@ -475,7 +475,7 @@ class Analyser:
                     (
                         dest_instr.id == PPC_INS_STWU and 
                         dest_instr.operands[0].reg == PPC_REG_R1 and
-                        dest_instr.operands[1].mem.base == PPC_REG_R1
+                        dest_instr.operands[2].reg == PPC_REG_R1
                     )
                     or
                     (
@@ -507,7 +507,7 @@ class Analyser:
         """Queues potential @h/@ha operands to be followed"""
 
         # Cancel if not part of a reference
-        if not 0x8000 <= instr.operands[1].imm <= 0x817f:
+        if not 0x8000 <= get_lis_ha(instr) <= 0x817f:
             return
 
         # Queue for post-processing
@@ -519,7 +519,7 @@ class Analyser:
 
         # Get source register
         if instr.id in storeLoadInsns:
-            reg = instr.operands[1].mem.base
+            reg = instr.operands[2].reg
         else:
             reg = instr.operands[1].reg
 
@@ -537,9 +537,7 @@ class Analyser:
         
         # Get offset
         if instr.id in storeLoadInsns:
-            offs = instr.operands[1].mem.disp
-        elif instr.id in algebraicReferencingInsns:
-            offs = sign_half(instr.operands[2].imm)
+            offs = get_mem_l(instr)
         else:
             offs = instr.operands[2].imm
         
@@ -720,7 +718,7 @@ class Analyser:
                 and (changed_r13 or changed_r2)):
                 # Get source register
                 if instr.id in storeLoadInsns:
-                    reg = instr.operands[1].mem.base
+                    reg = instr.operands[2].reg
                 else:
                     reg = instr.operands[1].reg
 
@@ -731,18 +729,18 @@ class Analyser:
                         del self._sda[addr]                    
 
             # Update lower references
-            if (instr.id in storeLoadInsns and instr.operands[1].mem.base in uppers) \
+            if (instr.id in storeLoadInsns and instr.operands[2].reg in uppers) \
                     or (instr.id in lowerInsns and instr.operands[1].reg in uppers):
                 # Check if @ha required
                 algebraic = instr.id in algebraicReferencingInsns
 
                 # Get upper register and lower value
                 if instr.id in storeLoadInsns:
-                    reg = instr.operands[1].mem.base
-                    offs = instr.operands[1].mem.disp
+                    reg = instr.operands[2].reg
+                    offs = get_mem_l(instr)
                 else:
                     reg = instr.operands[1].reg
-                    offs = sign_half(instr.operands[2].imm) if algebraic else instr.operands[2].imm
+                    offs = instr.operands[2].imm
 
                 # Get upper setter
                 upper = uppers[reg]
@@ -886,7 +884,7 @@ class Analyser:
             #       lis rX, sym@ha
             #       b block2 
             # This is rare and likely only a problem in GCC code
-            if instr.id in upperInsns and 0x8000 <= instr.operands[1].imm <= 0x817f:
+            if instr.id in upperInsns and 0x8000 <= get_lis_ha(instr) <= 0x817f:
                 # Check for known false positives
                 if not self._ovr.is_blocked_pointer(addr):
                     # TODO: only pick up ones found before first branch?
@@ -939,7 +937,7 @@ class Analyser:
                 addr = dest - 4
             
             # Split path to follow
-            if instr.id == PPC_INS_BC:
+            if instr.id in bcVariantInsns:
                 dest = instr.operands[-1].imm
 
                 # Follow branch with copy of context
@@ -1026,7 +1024,7 @@ class Analyser:
                     break
             
             # Split path to follow
-            if instr.id == PPC_INS_BC:
+            if instr.id in bcVariantInsns:
                 # Follow branch then come back
                 dest = instr.operands[-1].imm
                 self._follow_flow(dis, dest, start, end, is_init, visited, indent+1)
@@ -1090,9 +1088,9 @@ class Analyser:
                 # Get upper register and lower value
                 # TODO: deduplicate
                 if instr.id in storeLoadInsns:
-                    offs = instr.operands[1].mem.disp
+                    offs = get_mem_l(instr)
                 else:
-                    offs = sign_half(instr.operands[2].imm) if algebraic else instr.operands[2].imm
+                    offs = instr.operands[2].imm
 
                 handler.notify_lower(lower, offs, algebraic)
 

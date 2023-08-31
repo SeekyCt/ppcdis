@@ -13,9 +13,9 @@ from capstone.ppc import *
 from .analyser import RelocType
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarylect import LECTReader
-from .csutil import DummyInstr, sign_half, cs_disasm 
+from .csutil import DummyInstr, cs_disasm, unsign_half 
 from .instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
-                       signExtendInsns, storeLoadInsns, renamedInsns)
+                       storeLoadInsns)
 from .overrides import OverrideManager
 from .slices import Slice, Source
 from .relocs import RelocGetter
@@ -208,14 +208,14 @@ class Disassembler:
         # Replace destination with label name
         line.operands = cr + name
     
-    def _process_signed_immediate(self, instr: capstone.CsInsn, line: DisasmLine):
-        """Sign extends the immediate when capstone misses it"""
+    def _process_unsigned_immediate(self, instr: capstone.CsInsn, line: DisasmLine):
+        """Un-sign-extends the immediate when unwanted"""
 
         others = instr.op_str[:instr.op_str.rfind(' ')]
-        signed = sign_half(instr.operands[-1].imm)
+        unsigned = unsign_half(instr.operands[-1].imm)
         
-        line.operands = others + ' ' + hex(signed)
-    
+        line.operands = others + ' ' + hex(unsigned)
+
     def _process_upper(self, instr: capstone.CsInsn, line: DisasmLine, inline=False,
                        hashable=False, referenced=None):
         """Replaces the immediate of a lis with a reference"""
@@ -265,7 +265,7 @@ class Disassembler:
         # Get register info
         dest = instr.reg_name(instr.operands[0].reg)
         if instr.id in storeLoadInsns:
-            reg = instr.operands[1].mem.base
+            reg = instr.operands[2].reg
         else:
             reg = instr.operands[1].reg
         reg_name = instr.reg_name(reg)
@@ -332,17 +332,12 @@ class Disassembler:
             if instr.id in conditionalBranchInsns:
                 self._process_branch_hint(instr, ret)
 
-            if instr.id in signExtendInsns:
-                self._process_signed_immediate(instr, ret)
-
             if instr.id in upperInsns:
+                self._process_unsigned_immediate(instr, ret)
                 self._process_upper(instr, ret, inline, hashable, referenced)
             
             if instr.id in lowerInsns or instr.id in storeLoadInsns:
                 self._process_lower(instr, ret, inline, hashable, referenced)
-            
-            if instr.id in renamedInsns:
-                ret.mnemonic = renamedInsns[instr.id] + ' '
         else:
             ret = DisasmLine(instr, ("opword" if inline else ".4byte"), f"0x{instr.bytes.hex()}")
         

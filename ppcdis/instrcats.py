@@ -331,39 +331,90 @@ returnBranchInsns = {
     PPC_INS_RFI,
 }
 
+"""Variants of the BC instruction"""
+bcVariantInsns = {
+    PPC_INS_BC,
+    PPC_INS_BEQ,
+    PPC_INS_BGE,
+    PPC_INS_BGT,
+    PPC_INS_BLE,
+    PPC_INS_BLT,
+    PPC_INS_BNE
+}
+
+"""Variants of the BCL instruction"""
+bclVariantInsns = {
+    PPC_INS_BCL,
+    PPC_INS_BEQL,
+    PPC_INS_BGEL,
+    PPC_INS_BGTL,
+    PPC_INS_BLEL,
+    PPC_INS_BLTL,
+    PPC_INS_BNEL
+}
+
+"""Variants of the BCLR instruction"""
+bclrVariantInsns = {
+    PPC_INS_BCLR,
+    PPC_INS_BEQLR,
+    PPC_INS_BGELR,
+    PPC_INS_BGTLR,
+    PPC_INS_BLELR,
+    PPC_INS_BLTLR,
+    PPC_INS_BNELR
+}
+
+"""Variants of the BCLRL instruction"""
+bclrlVariantInsns = {
+    PPC_INS_BCLRL,
+    PPC_INS_BEQLRL,
+    PPC_INS_BGELRL,
+    PPC_INS_BGTLRL,
+    PPC_INS_BLELRL,
+    PPC_INS_BLTLRL,
+    PPC_INS_BNELRL
+}
+
+"""Variants of the BCCTR instruction"""
+bcctrVariantInsns = {
+    PPC_INS_BCCTR,
+    PPC_INS_BEQCTR,
+    PPC_INS_BGECTR,
+    PPC_INS_BGTCTR,
+    PPC_INS_BLECTR,
+    PPC_INS_BLTCTR,
+    PPC_INS_BNECTR
+}
+
+"""Variants of the BCCTRL instruction"""
+bcctrlVariantInsns = {
+    PPC_INS_BCCTRL,
+    PPC_INS_BEQCTRL,
+    PPC_INS_BGECTRL,
+    PPC_INS_BGTCTRL,
+    PPC_INS_BLECTRL,
+    PPC_INS_BLTCTRL,
+    PPC_INS_BNECTRL
+}
+
 """Instructions that need their condition hint checking"""
 conditionalBranchInsns = {
-    PPC_INS_BC,
-    PPC_INS_BCL,
-    PPC_INS_BCLR,
-    PPC_INS_BCLRL,
-    PPC_INS_BCCTR,
-    PPC_INS_BCCTRL
+    *bcVariantInsns,
+    *bclVariantInsns,
+    *bclrVariantInsns,
+    *bclrlVariantInsns,
+    *bcctrVariantInsns,
+    *bcctrlVariantInsns
 }
 
 """Instructions that can branch to a label, and therefore need symbol processing"""
 labelledBranchInsns = {
-    PPC_INS_BC,
-    PPC_INS_BCL,
+    *bcVariantInsns,
+    *bclrlVariantInsns,
     PPC_INS_B,
     PPC_INS_BL,
     PPC_INS_BDNZ,
     PPC_INS_BDZ
-}
-
-"""Instructions where capstone misses out sign extending the immediate"""
-signExtendInsns = {
-    PPC_INS_ADDI,
-    PPC_INS_ADDIC,
-    PPC_INS_SUBFIC,
-    PPC_INS_MULLI,
-    PPC_INS_LI,
-    PPC_INS_CMPWI
-}
-
-"""Instruction names that capstone gets wrong"""
-renamedInsns = {
-    PPC_INS_CNTLZW : "cntlzw"
 }
 
 """Instructions that can contain the upper half of a symbol reference"""
