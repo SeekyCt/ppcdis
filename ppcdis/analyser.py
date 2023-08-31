@@ -538,8 +538,10 @@ class Analyser:
         # Get offset
         if instr.id in storeLoadInsns:
             offs = instr.operands[1].mem.disp
-        else:
+        elif instr.id in algebraicReferencingInsns:
             offs = sign_half(instr.operands[2].imm)
+        else:
+            offs = instr.operands[2].imm
         
         # Queue for postprocessing if not blocked
         if not self._ovr.is_blocked(instr.address, sda_base + offs):
