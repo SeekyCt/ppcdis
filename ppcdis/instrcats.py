@@ -321,7 +321,6 @@ blacklistedInsns = {
     PPC_INS_MTDEAR,
     PPC_INS_MFICCR,
     PPC_INS_MFASR,
-    PPC_INS_FCMPU
 }
 
 """Branch instructions that act as returns"""

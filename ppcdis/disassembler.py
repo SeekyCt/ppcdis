@@ -13,7 +13,7 @@ from capstone.ppc import *
 from .analyser import RelocType
 from .binarybase import BinaryReader, BinarySection, SectionType
 from .binarylect import LECTReader
-from .csutil import DummyInstr, cs_disasm, unsign_half 
+from .csutil import ByteInstr, DummyInstr, cs_disasm, unsign_half 
 from .instrcats import (labelledBranchInsns, conditionalBranchInsns, upperInsns, lowerInsns,
                        storeLoadInsns)
 from .overrides import OverrideManager
@@ -323,9 +323,9 @@ class Disassembler:
                       ) -> str:
         """Takes a capstone instruction and converts it to text"""
 
-        if not isinstance(instr, DummyInstr):
-            ret = DisasmLine(instr, instr.mnemonic, instr.op_str)
+        ret = DisasmLine(instr, instr.mnemonic, instr.op_str)
 
+        if not isinstance(instr, DummyInstr):
             if instr.id in labelledBranchInsns:
                 self._process_labelled_branch(instr, ret, inline, hashable, referenced)
 
@@ -338,8 +338,6 @@ class Disassembler:
             
             if instr.id in lowerInsns or instr.id in storeLoadInsns:
                 self._process_lower(instr, ret, inline, hashable, referenced)
-        else:
-            ret = DisasmLine(instr, ("opword" if inline else ".4byte"), f"0x{instr.bytes.hex()}")
         
         return ret.to_txt(self._sym, inline, hashable, referenced)
     
@@ -367,7 +365,7 @@ class Disassembler:
                     assert ref.t == RelocType.NORMAL, f"Bad reloc {addr:x} -> {ref}"
                     ops = self._sym.get_name(ref.target) + ref.format_offs()
 
-        instr = DummyInstr(addr, val)
+        instr = ByteInstr(addr, val)
         return DisasmLine(instr, ".4byte", ops).to_txt(self._sym)
 
     def _process_unaligned_byte(self, addr: int, val: bytes) -> str:
@@ -381,7 +379,7 @@ class Disassembler:
                         "data is split below word alignment")
         
         # Split into individual bytes if a non-aligned reference falls within this word
-        instr = DummyInstr(addr, val)
+        instr = ByteInstr(addr, val)
         return DisasmLine(instr, ".byte", f"0x{val.hex()}").to_txt(self._sym)
 
     ###########

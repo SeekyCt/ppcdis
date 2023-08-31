@@ -2,7 +2,7 @@
 Capstone helpers
 """
 
-from typing import OrderedDict, Tuple
+from typing import Optional, OrderedDict, Tuple
 from dataclasses import dataclass
 import struct
 
@@ -16,12 +16,20 @@ from .instrcats import (blacklistedInsns, firstGprWriteInsns, firstLastGprWriteI
 EXPECTED_CS = "5.0.1"
 assert cs_ver == EXPECTED_CS, f"Error: wrong capstone version installed, {EXPECTED_CS} is required"
 
-@dataclass
+@dataclass(frozen=True)
 class DummyInstr:
-    """Dummy instruction class for data lines"""
+    """Dummy instruction class for failed CsInsn"""
 
     address: int
     bytes: bytes
+    mnemonic: str
+    op_str: str
+
+class ByteInstr(DummyInstr):
+    """Dummy instruction class for data lines"""
+
+    def __init__(self, address: int, dat: bytes):
+        super().__init__(address, dat, ".4byte", f"0x{dat.hex()}")
 
 def sign_half(half: int) -> int:
     """Sign extends a 16-bit int"""
@@ -77,6 +85,48 @@ def cs_should_ignore(instr: CsInsn) -> bool:
     
     return False
 
+def handle_mspr(addr: int, dat: bytes, write: bool) -> Optional[DummyInstr]:
+    val = int.from_bytes(dat, 'big')
+
+    if (val & 1):
+        return None
+
+    d = (val & 0x03e00000) >> 21
+    a = (val & 0x001f0000) >> 16
+    b = (val & 0x0000f800) >> 11
+    spr = (b << 5) + a
+
+    if write:
+        return DummyInstr(addr, dat, "mtspr", f"0x{spr:x}, r{d}")
+    else:
+        return DummyInstr(addr, dat, "mfspr", f"r{d}, 0x{spr:x}")
+
+def handle_fcmp(addr: int, dat: bytes) -> DummyInstr:
+    val = int.from_bytes(dat, 'big')
+
+    crd = (val & 0x03800000) >> 23
+    a = (val & 0x001f0000) >> 16
+    b = (val & 0x0000f800) >> 11
+
+    return DummyInstr(addr, dat, f"fcmpo", f"cr{crd}, f{a}, f{b}")
+
+def handle_failed(addr: int, dat: bytes) -> DummyInstr:
+    val = int.from_bytes(dat, 'big')
+    idx = (val & 0xFC000000) >> 26
+    idx2 = (val & 0x000007FE) >> 1
+
+    if idx == 31 and idx2 in (339, 467):
+        ret = handle_mspr(addr, dat, idx2 == 467)
+    elif idx == 63 and idx2 == 32:
+        ret = handle_fcmp(addr, dat)
+    else:
+        ret = None
+
+    if ret is None:
+        ret = ByteInstr(addr, dat)
+
+    return ret
+
 def cs_disasm(addr: int, dat: bytes) -> OrderedDict[int, CsInsn]:
     """Disassembles code into an ordered dict of CsInsns"""
 
@@ -89,7 +139,7 @@ def cs_disasm(addr: int, dat: bytes) -> OrderedDict[int, CsInsn]:
         # Get capstone to disassemble as many as possible
         for instr in cs.disasm(dat[i:], addr + i, (len(dat) - i) // 4):
             if cs_should_ignore(instr):
-                instr = DummyInstr(instr.address, instr.bytes)
+                instr = handle_failed(instr.address, instr.bytes)
 
             ret[instr.address] = instr
             i += 4
@@ -97,7 +147,7 @@ def cs_disasm(addr: int, dat: bytes) -> OrderedDict[int, CsInsn]:
         # Skip instruction capstone failed
         if i < len(dat):
             val = dat[i:i + 4]
-            ret[addr + i] = DummyInstr(addr + i, val)
+            ret[addr + i] = handle_failed(addr + i, val)
             i += 4
 
     return ret
