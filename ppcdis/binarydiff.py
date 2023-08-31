@@ -55,10 +55,8 @@ def diff_relocs(good: RelReader, test: RelReader, max_diffs=-1):
     """Prints the diff of the relocations in two rels"""
 
     n = 0
-    eq = True
     for i, (r1, r2) in enumerate(zip(good.ordered_relocs, test.ordered_relocs)):
         if r1 != r2:
-            eq = False
             print(f"Reloc {i} (0x{i * RelSize.RELOC_ENTRY})")
 
             print_diff("Module", r1.target_module, r2.target_module)
@@ -73,5 +71,3 @@ def diff_relocs(good: RelReader, test: RelReader, max_diffs=-1):
             if n == max_diffs:
                 print("Reached max diff count, stopping")
                 break
-
-    return eq
