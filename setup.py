@@ -10,7 +10,7 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         'colorama',
-        'capstone',
+        'capstone==5.0.1',
         'pyelftools',
         'pylibyaml',
         'PyYAML'
