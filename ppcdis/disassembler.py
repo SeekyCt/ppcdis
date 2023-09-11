@@ -5,7 +5,7 @@ Disassembler for assembly code (re)generation
 from dataclasses import dataclass
 from hashlib import sha1
 import json
-from typing import Dict, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import capstone
 from capstone.ppc import *
@@ -505,11 +505,9 @@ class Disassembler:
             self._sym.create_slice_label(sl.end, section.type == SectionType.TEXT)
 
         return (
-            ".include \"macros.inc\"\n\n" +
             section.get_start_text() +
             section.get_balign_text() +
-            self._disasm_range(section, sl.start, sl.end) +
-            "\n"
+            self._disasm_range(section, sl.start, sl.end)
         )
     
     def output_slice(self, path: str, start: int, end: int):
@@ -520,7 +518,32 @@ class Disassembler:
         sl = Slice(start, end, section.name)
 
         with open(path, 'w') as f:
-            f.write(self.slice_to_text(section, sl))
+            f.write(
+                ".include \"macros.inc\"\n\n" +
+                self.slice_to_text(section, sl) +
+                "\n"
+            )
+
+    #####################
+    # Translation Units #
+    #####################
+
+    def output_tu(self, path: str, slices: List[Tuple[int, int]]):
+        """Outputs a translation unit's disassembly to a file"""
+
+        # Make slices
+        slice_texts = []
+        for start, end in slices:
+            section = self._bin.find_section_containing(start)
+            sl = Slice(start, end, section.name)
+            slice_texts.append(self.slice_to_text(section, sl))
+
+        with open(path, 'w') as f:
+            f.write(
+                ".include \"macros.inc\"\n\n" +
+                '\n\n'.join(slice_texts) +
+                '\n'
+            )
 
     #############
     # Functions #

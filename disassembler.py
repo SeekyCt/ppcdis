@@ -17,6 +17,8 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--overrides", help="Overrides yml path")
     parser.add_argument("-s", "--slice", type=hex_int, nargs='+',
                         help="Disassemble slices (give start & end pairs)")
+    parser.add_argument("-u", "--unit", type=hex_int, nargs='+',
+                        help="Disassemble translation unit (give section start & end pairs)")
     parser.add_argument("-j", "--jumptable", type=hex_int, nargs='+',
                         help="Generate jumptable workarounds (give starts)")
     parser.add_argument("-f", "--function", type=hex_int, nargs='+',
@@ -35,9 +37,9 @@ if __name__ == "__main__":
                         help="Generate source data dummmies (give start & end pairs)")
     args = parser.parse_args()
 
-    incompatibles = (args.slice, args.function, args.jumptable, args.hash)
+    incompatibles = (args.slice, args.unit, args.function, args.jumptable, args.hash)
     if len(incompatibles) - (incompatibles.count(None) + incompatibles.count(False)) > 1:
-        assert 0, "Invalid combination of --slice, --function, --jumptable and --hash"
+        assert 0, "Invalid combination of --slice, --unit, --function, --jumptable and --hash"
     if args.inline:
         assert args.function, "Inline mode can only be used with --function"
         assert not args.extra, "Inline mode can't be used with --extra"
@@ -57,6 +59,11 @@ if __name__ == "__main__":
             "Number of slices must equal number of output paths"
         for path, start, end in zip(args.output_paths, *[iter(args.slice)]*2):
             dis.output_slice(path, start, end)
+    elif args.unit is not None:
+        assert len(args.unit) % 2 == 0, "Missisg TU section end address"
+        assert len(args.output_paths) == 1, "--unit only takes 1 output"
+        slices = [(start, end) for start, end in zip(*[iter(args.unit)]*2)]
+        dis.output_tu(args.output_paths[0], slices)
     elif args.function is not None:
         assert len(args.function) == len(args.output_paths), \
             "Number of function addresses must equal number of output paths"
