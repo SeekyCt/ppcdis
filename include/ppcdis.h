@@ -137,6 +137,7 @@ typedef struct
 #define cr7eq 30
 #define cr7un 31
 
+void __save_gpr(void);
 void _savegpr_14(void);
 void _savegpr_15(void);
 void _savegpr_16(void);
@@ -156,6 +157,7 @@ void _savegpr_29(void);
 void _savegpr_30(void);
 void _savegpr_31(void);
 
+void __restore_gpr(void);
 void _restgpr_14(void);
 void _restgpr_15(void);
 void _restgpr_16(void);
@@ -175,6 +177,7 @@ void _restgpr_29(void);
 void _restgpr_30(void);
 void _restgpr_31(void);
 
+void __save_fpr(void);
 void _savefpr_14(void);
 void _savefpr_15(void);
 void _savefpr_16(void);
@@ -194,6 +197,7 @@ void _savefpr_29(void);
 void _savefpr_30(void);
 void _savefpr_31(void);
 
+void __restore_fpr(void);
 void _restfpr_14(void);
 void _restfpr_15(void);
 void _restfpr_16(void);
